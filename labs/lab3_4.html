@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MQTT Dashboard — ECharts Edition</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <!-- Apache ECharts -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/theme/dark.min.js"></script>
+  <style>
+    :root {
+      --bg:#0b0f14; --card:#0f172a; --text:#e5e7eb; --muted:#9ca3af; --shadow:0 2px 10px rgba(0,0,0,.4);
+      --chip-bg:#1f2937; --chip-fg:#d1d5db; --kpi:#e5e7eb; --log:#0b1220; --border:#1f2937;
+    }
+    [data-theme="light"] {
+      --bg:#fafafa; --card:#ffffff; --text:#111827; --muted:#6b7280; --shadow:0 2px 10px rgba(0,0,0,.08);
+      --chip-bg:#eef2ff; --chip-fg:#3730a3; --kpi:#111827; --log:#f5f7fb; --border:#e5e7eb;
+    }
+    html, body { height:100%; }
+    body { font-family: system-ui, Arial, sans-serif; background:var(--bg); color:var(--text); margin:0; }
+    .card { background:var(--card); padding:1rem 1.25rem; border-radius:12px; box-shadow:var(--shadow); margin:1rem; width:calc(100% - 2rem); border:1px solid var(--border); }
+    .row { display:flex; gap:1rem; flex-wrap:wrap; align-items:center; }
+    input[type=text] { padding:.4rem .6rem; width:26rem; background:var(--card); color:var(--text); border:1px solid var(--border); border-radius:8px; }
+    input[type=range] { width:160px; }
+    button { padding:.5rem .9rem; border:1px solid var(--border); background:var(--card); color:var(--text); border-radius:8px; cursor:pointer; }
+    .primary { background:#4f46e5; color:#fff; border-color:#4f46e5; }
+    .pill { display:inline-block; background:var(--chip-bg); color:var(--chip-fg); padding:.15rem .5rem; border-radius:999px; font-size:.85rem; margin-left:.5rem; }
+    .muted { color:var(--muted); }
+    .kpi { font-size:1.8rem; font-weight:700; color:var(--kpi); }
+    .grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:1rem; }
+    .log { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background:var(--log); padding:.6rem; border-radius:8px; height:200px; overflow:auto; color:var(--text); border:1px solid var(--border); white-space: pre-wrap; }
+    .charts { display:flex; gap:1rem; align-items:stretch; width:100%; }
+    .chart { flex:1 1 33%; min-width:260px; height:360px; border:1px solid var(--border); border-radius:8px; }
+    .spacer { flex:1; }
+  </style>
+</head>
+<body>
+  <h2 style="margin:1rem;">MQTT Dashboard — QoS, Retain and LWT (Sensors, LED, Theme)</h2>
+  <div class="card">
+    <div class="row">
+      <label>Broker:</label><input id="broker" value="wss://test.mosquitto.org:8081">
+      <label>Base Topic:</label><input id="base" value="iot/yourname">
+      <button class="primary" id="btnConnect">Connect</button>
+      <span id="status" class="pill">Not connected</span>
+      <div class="spacer"></div>
+      <button id="btnTheme">Theme</button>
+    </div>
+    <p class="muted">Subscribes to <code>[base]/#</code>. Publishes LED JSON to <code>[base]/led</code>. Reads sensor from <code>[base]/bme688</code> and LWT at <code>[base]/status</code>.</p>
+  </div>
+
+  <div class="card">
+    <div class="grid">
+      <div><div class="muted">Temperature</div><div id="kTemp" class="kpi">—</div></div>
+      <div><div class="muted">Humidity</div><div id="kHum" class="kpi">—</div></div>
+      <div><div class="muted">Pressure</div><div id="kPres" class="kpi">—</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Device Status</h3>
+    <div>Current: <span id="devStatus" class="pill">unknown</span></div>
+    <p class="muted">Shows retained online/offline status from LWT.</p>
+  </div>
+
+  <div class="card">
+    <h3>Charts</h3>
+    <div class="charts">
+      <div id="chartTemp" class="chart"></div>
+      <div id="chartHum" class="chart"></div>
+      <div id="chartPres" class="chart"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>LED Control</h3>
+    <div class="row" style="align-items:center;">
+      <label>Pick color: <input id="color" type="color" value="#0066ff"></label>
+      <label>Brightness <input id="br" type="range" min="0" max="255" value="100"></label>
+      <label>QoS <select id="qos">
+        <option value="0">0</option>
+        <option value="1" selected>1</option>
+        <option value="2">2</option>
+      </select></label>
+      <label><input type="checkbox" id="retain"> Retain</label>
+      <button id="btnSend">Send</button>
+      <div id="preview" style="width:34px;height:34px;border:1px solid var(--border);border-radius:8px;"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Log</h3>
+    <div id="log" class="log"></div>
+  </div>
+
+<script>
+(function(){
+  var client = null;
+  var N = 100;
+  var buf = { t:[], temp:[], hum:[], pres:[] };
+  var chartT, chartH, chartP;
+
+  function log(m){
+    var el = document.getElementById('log');
+    if (!el) return;
+    el.textContent += (m ? String(m) : '') + '\n';
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function currentThemeName(){
+    return (document.documentElement.getAttribute('data-theme') === 'light') ? null : 'dark';
+  }
+
+  function toggleTheme(){
+    var root = document.documentElement;
+    var cur = root.getAttribute('data-theme') || 'light';
+    var next = (cur === 'light') ? 'dark' : 'light';
+    root.setAttribute('data-theme', next);
+    rebuildCharts();
+  }
+
+  function hexToRgb(hex){
+    var h = String(hex || '').replace('#','');
+    return { r:parseInt(h.substring(0,2),16)||0, g:parseInt(h.substring(2,4),16)||0, b:parseInt(h.substring(4,6),16)||0 };
+  }
+
+  function pushData(ts, temp, hum, pres){
+    if (typeof temp !== "number" || typeof hum !== "number" || typeof pres !== "number") return;
+    buf.t.push(ts); buf.temp.push(temp); buf.hum.push(hum); buf.pres.push(pres);
+    if (buf.t.length > N){ buf.t.shift(); buf.temp.shift(); buf.hum.shift(); buf.pres.shift(); }
+    document.getElementById('kTemp').textContent = temp.toFixed(1) + " °C";
+    document.getElementById('kHum').textContent  = hum.toFixed(1) + " %";
+    document.getElementById('kPres').textContent = pres.toFixed(1) + " hPa";
+    updateCharts();
+  }
+
+  function baseLineOption(name, seriesData){
+    return {
+      title: { text: name },
+      grid: { left: 45, right: 15, top: 40, bottom: 35 },
+      tooltip: { trigger: 'axis' },
+      xAxis: {
+        type: 'category',
+        data: buf.t.map(function(ts){ return new Date(ts*1000).toLocaleTimeString(); }),
+        axisLabel: { show: true, rotate: 0 }
+      },
+      yAxis: { type: 'value', scale: true, axisLabel: { formatter: '{value}' } },
+      series: [ { type: 'line', smooth: true, showSymbol: false, data: seriesData } ]
+    };
+  }
+
+  function buildCharts(){
+    var theme = currentThemeName();
+    chartT = echarts.init(document.getElementById('chartTemp'), theme);
+    chartH = echarts.init(document.getElementById('chartHum'), theme);
+    chartP = echarts.init(document.getElementById('chartPres'), theme);
+    updateCharts();
+    window.addEventListener('resize', function(){
+      chartT.resize(); chartH.resize(); chartP.resize();
+    });
+  }
+
+  function disposeCharts(){
+    if (chartT) chartT.dispose();
+    if (chartH) chartH.dispose();
+    if (chartP) chartP.dispose();
+    chartT = chartH = chartP = null;
+  }
+
+  function rebuildCharts(){
+    disposeCharts();
+    buildCharts();
+  }
+
+  function updateCharts(){
+    if (!chartT || !chartH || !chartP) return;
+    chartT.setOption(baseLineOption('Temp °C', buf.temp));
+    chartH.setOption(baseLineOption('Hum %', buf.hum));
+    chartP.setOption(baseLineOption('hPa', buf.pres));
+  }
+
+  function connect(){
+    var url = document.getElementById('broker').value;
+    var base = document.getElementById('base').value;
+    log("Connecting to " + url + " ...");
+    client = mqtt.connect(url, { protocolVersion: 4, clean: true, connectTimeout: 6000, keepalive: 30 });
+
+    client.on('connect', function(){
+      document.getElementById('status').textContent = "Connected";
+      client.subscribe(base + "/#");
+      log("Subscribed to " + base + "/#");
+    });
+    client.on('message', function(topic, payload, packet){
+      var text = payload.toString();
+      var retained = (packet && packet.retain) ? " (retained)" : "";
+      var qos = (packet && typeof packet.qos === "number") ? (" (qos=" + packet.qos + ")") : "";
+      log("[" + topic + "] " + text + retained + qos);
+
+      var baseVal = document.getElementById('base').value;
+      if (topic === baseVal + "/status") {
+        var badge = document.getElementById('devStatus');
+        try { var j = JSON.parse(text); badge.textContent = (j.status || text) + (retained ? " • retained" : ""); }
+        catch(e){ badge.textContent = text + (retained ? " • retained" : ""); }
+      }
+
+      if (topic.endsWith("/bme688")) {
+        try{
+          var j2 = JSON.parse(text);
+          pushData(j2.ts || Math.floor(Date.now()/1000), j2.temp_c, j2.hum_pct, j2.press_hpa);
+        }catch(e){ log("Parse error: " + e.message); }
+      }
+    });
+    client.on('error', function(e){ log("Error: " + (e && e.message ? e.message : String(e))); });
+    client.on('close', function(){ document.getElementById('status').textContent = "Disconnected"; });
+    buildCharts();
+  }
+
+  function sendLED(){
+    var base = document.getElementById('base').value;
+    var hex = document.getElementById('color').value;
+    var rgb = hexToRgb(hex);
+    var brightness = parseInt(document.getElementById('br').value, 10);
+    var qos = parseInt(document.getElementById('qos').value, 10);
+    var retain = document.getElementById('retain').checked;
+    var payload = JSON.stringify({r:rgb.r,g:rgb.g,b:rgb.b,brightness:brightness});
+    if (!client) { log("Not connected"); return; }
+    client.publish(base + "/led", payload, { qos: qos, retain: retain });
+    log("Publish -> " + base + "/led " + payload + " (qos=" + qos + ", retain=" + retain + ")");
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    document.getElementById('btnConnect').addEventListener('click', connect);
+    document.getElementById('btnTheme').addEventListener('click', toggleTheme);
+    document.getElementById('color').addEventListener('input', function(){ var prev=document.getElementById('preview'); if (prev) prev.style.background = this.value; });
+    document.getElementById('btnSend').addEventListener('click', sendLED);
+    var c = document.getElementById('color'); if (c) { var prev=document.getElementById('preview'); if (prev) prev.style.background = c.value; }
+  });
+})();
+</script>
+</body>
+</html>
