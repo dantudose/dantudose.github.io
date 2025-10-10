@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Lab 3 — Sensor Dashboard (BME688)</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; background:#fafafa; margin:2rem; }
+    .card { background:#fff; padding:1rem 1.25rem; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,.08); margin-bottom:1rem; max-width:980px; }
+    .row { display:flex; gap:1rem; flex-wrap:wrap; align-items:center; }
+    input[type=text] { padding:.4rem .6rem; width:26rem; }
+    button { padding:.5rem .9rem; border:none; border-radius:8px; cursor:pointer; }
+    .primary { background:#4f46e5; color:white; }
+    .kpi { font-size:1.8rem; font-weight:700; }
+    .muted { color:#666; }
+    .grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:1rem; }
+    canvas { background:#fff; border-radius:8px; }
+    .log { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background:#f5f5f5; padding:.6rem; border-radius:8px; height:180px; overflow:auto; }
+  </style>
+</head>
+<body>
+  <h2>Lab 3 — Live Sensor Dashboard (BME688)</h2>
+  <div class="card">
+    <div class="row">
+      <label>Broker:</label><input id="broker" value="wss://test.mosquitto.org:8081">
+      <label>Base Topic:</label><input id="base" value="iot/yourname">
+      <button class="primary" onclick="connect()">Connect</button>
+      <span id="status">Not connected</span>
+    </div>
+    <p class="muted">Subscribes to <code>[base]/bme688</code> and charts the last 100 samples.</p>
+  </div>
+
+  <div class="card">
+    <div class="grid">
+      <div><div class="muted">Temperature</div><div id="kTemp" class="kpi">—</div></div>
+      <div><div class="muted">Humidity</div><div id="kHum" class="kpi">—</div></div>
+      <div><div class="muted">Pressure</div><div id="kPres" class="kpi">—</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Charts</h3>
+    <div class="row" style="align-items:flex-start;">
+      <canvas id="chartTemp" width="420" height="220"></canvas>
+      <canvas id="chartHum" width="420" height="220"></canvas>
+      <canvas id="chartPres" width="420" height="220"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Log</h3>
+    <div id="log" class="log"></div>
+  </div>
+
+<script>
+let client;
+const N = 100;
+const buf = { t:[], temp:[], hum:[], pres:[] };
+let chartT, chartH, chartP;
+
+function log(m){ const el = document.getElementById('log'); el.textContent += m + "\n"; el.scrollTop = el.scrollHeight; }
+
+function connect(){
+  const url = document.getElementById('broker').value;
+  const base = document.getElementById('base').value;
+  client = mqtt.connect(url);
+  log("Connecting to " + url + " ...");
+  client.on('connect', () => {
+    document.getElementById('status').textContent = "Connected";
+    client.subscribe(base + "/bme688");
+    log("Subscribed to " + base + "/bme688");
+  });
+  client.on('message', (topic, payload) => {
+    if (!topic.endsWith("/bme688")) return;
+    try{
+      const j = JSON.parse(payload.toString());
+      const ts = j.ts ? j.ts : Math.floor(Date.now()/1000);
+      pushData(ts, j.temp_c, j.hum_pct, j.press_hpa);
+    }catch(e){ log("Parse error: " + e.message); }
+  });
+  client.on('close', () => document.getElementById('status').textContent="Disconnected");
+  setupCharts();
+}
+
+function pushData(ts, temp, hum, pres){
+  buf.t.push(ts); buf.temp.push(temp); buf.hum.push(hum); buf.pres.push(pres);
+  if (buf.t.length > N){ buf.t.shift(); buf.temp.shift(); buf.hum.shift(); buf.pres.shift(); }
+  document.getElementById('kTemp').textContent = temp.toFixed(1) + " °C";
+  document.getElementById('kHum').textContent  = hum.toFixed(1) + " %";
+  document.getElementById('kPres').textContent = pres.toFixed(1) + " hPa";
+  updateCharts();
+}
+
+function setupCharts(){
+  const ctxT = document.getElementById('chartTemp').getContext('2d');
+  const ctxH = document.getElementById('chartHum').getContext('2d');
+  const ctxP = document.getElementById('chartPres').getContext('2d');
+  chartT = new Chart(ctxT, { type:'line', data:{ labels: buf.t, datasets:[{ label:'Temp °C', data: buf.temp }] }, options:{ animation:false, scales:{ x:{ display:false } } } });
+  chartH = new Chart(ctxH, { type:'line', data:{ labels: buf.t, datasets:[{ label:'Hum %', data: buf.hum }] }, options:{ animation:false, scales:{ x:{ display:false } } } });
+  chartP = new Chart(ctxP, { type:'line', data:{ labels: buf.t, datasets:[{ label:'hPa', data: buf.pres }] }, options:{ animation:false, scales:{ x:{ display:false } } } });
+}
+
+function updateCharts(){
+  chartT.data.labels = buf.t; chartT.data.datasets[0].data = buf.temp; chartT.update('none');
+  chartH.data.labels = buf.t; chartH.data.datasets[0].data = buf.hum;  chartH.update('none');
+  chartP.data.labels = buf.t; chartP.data.datasets[0].data = buf.pres; chartP.update('none');
+}
+</script>
+</body>
+</html>
