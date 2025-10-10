@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Lab 2 — MQTT Subscribe + LED Control</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; background:#fafafa; margin:2rem; }
+    .card { background:#fff; padding:1rem 1.25rem; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,.08); margin-bottom:1rem; max-width:900px; }
+    .row { display:flex; gap:1rem; flex-wrap:wrap; align-items:center; }
+    input[type=text] { padding:.4rem .6rem; width:26rem; }
+    input[type=range] { width:160px; }
+    button { padding:.5rem .9rem; border:none; border-radius:8px; cursor:pointer; }
+    .primary { background:#4f46e5; color:white; }
+    .log { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background:#f5f5f5; padding:.6rem; border-radius:8px; height:260px; overflow:auto; }
+    .swatch { width:28px; height:28px; border-radius:6px; border:1px solid #ddd; display:inline-block; cursor:pointer; }
+    .pill { display:inline-block; background:#eef2ff; color:#3730a3; padding:.15rem .5rem; border-radius:999px; font-size:.85rem; margin-left:.5rem; }
+    .muted { color:#666; }
+  </style>
+</head>
+<body>
+  <h2>Lab 2 — Control the NeoPixel via MQTT</h2>
+  <div class="card">
+    <div class="row">
+      <label>Broker:</label><input id="broker" value="wss://test.mosquitto.org:8081">
+      <label>Base Topic:</label><input id="base" value="iot/yourname">
+      <button class="primary" onclick="connect()">Connect</button>
+      <span id="status" class="pill">Not connected</span>
+    </div>
+    <p class="muted">Subscribes to <code>[base]/#</code>. Publishes LED color JSON to <code>[base]/led</code>. Shows <code>[base]/led/ack</code> if your device sends acks.</p>
+  </div>
+
+  <div class="card">
+    <h3>LED Presets</h3>
+    <div class="row">
+      <span class="swatch" style="background:#ff0000" onclick="setColor(255,0,0)"></span>
+      <span class="swatch" style="background:#00ff00" onclick="setColor(0,255,0)"></span>
+      <span class="swatch" style="background:#0000ff" onclick="setColor(0,0,255)"></span>
+      <span class="swatch" style="background:#ffff00" onclick="setColor(255,255,0)"></span>
+      <span class="swatch" style="background:#ff00ff" onclick="setColor(255,0,255)"></span>
+      <span class="swatch" style="background:#00ffff" onclick="setColor(0,255,255)"></span>
+      <button onclick="setColor(0,0,0)">Off</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Custom RGB</h3>
+    <div class="row">
+      <label>R <input id="r" type="range" min="0" max="255" value="0" oninput="updatePreview()"></label>
+      <label>G <input id="g" type="range" min="0" max="255" value="0" oninput="updatePreview()"></label>
+      <label>B <input id="b" type="range" min="0" max="255" value="255" oninput="updatePreview()"></label>
+      <label>Brightness <input id="br" type="range" min="0" max="255" value="100"></label>
+      <div id="preview" class="swatch" style="width:40px;height:40px;"></div>
+      <button onclick="sendCustom()">Send</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Log</h3>
+    <div id="log" class="log"></div>
+  </div>
+
+<script>
+let client;
+function log(m){ const l=document.getElementById('log'); l.textContent += m + "\n"; l.scrollTop = l.scrollHeight; }
+function updatePreview(){ const r=+rEl.value, g=+gEl.value, b=+bEl.value; prev.style.background = `rgb(${r},${g},${b})`; }
+function setColor(r,g,b){ publishLED(r,g,b,100); }
+
+const rEl = document.getElementById('r');
+const gEl = document.getElementById('g');
+const bEl = document.getElementById('b');
+const prev = document.getElementById('preview');
+updatePreview();
+
+function connect(){
+  const url = document.getElementById('broker').value;
+  const base = document.getElementById('base').value;
+  client = mqtt.connect(url);
+  log("Connecting to " + url + " ...");
+  client.on('connect', () => {
+    document.getElementById('status').textContent = "Connected";
+    client.subscribe(base + "/#");
+    log("Subscribed to " + base + "/#");
+  });
+  client.on('message', (topic, payload) => {
+    log("[" + topic + "] " + payload.toString());
+  });
+  client.on('close', () => { document.getElementById('status').textContent = "Disconnected"; });
+}
+
+function publishLED(r,g,b,brightness){
+  const base = document.getElementById('base').value;
+  const payload = JSON.stringify({r,g,b,brightness});
+  client.publish(base + "/led", payload);
+  log("Published -> " + base + "/led " + payload);
+}
+
+function sendCustom(){
+  publishLED(+rEl.value, +gEl.value, +bEl.value, +document.getElementById('br').value);
+}
+</script>
+</body>
+</html>
