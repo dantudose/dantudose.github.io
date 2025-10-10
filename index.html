@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>MQTT Dashboard - Sparrow Node</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    body { font-family: sans-serif; background: #fafafa; margin: 2em; }
+    .card { background: white; padding: 1em 1.5em; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.1); margin-bottom: 1.5em; max-width: 480px; }
+    .log { font-family: monospace; white-space: pre-wrap; background: #f6f6f6; padding: .5em; border-radius: 6px; height: 200px; overflow-y: auto; }
+    button { padding: 0.4em 1em; border: none; border-radius: 5px; margin-right: 0.4em; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h2>ESP32-C6 Sparrow MQTT Dashboard</h2>
+  <div class="card">
+    <label>Broker:</label>
+    <input id="broker" value="wss://test.mosquitto.org:8081" size="40"><br><br>
+    <label>Topic Base:</label>
+    <input id="base" value="iot/yourname" size="30"><br><br>
+    <button onclick="connect()">Connect</button>
+    <span id="status">Not connected</span>
+  </div>
+
+  <div class="card">
+    <h3>Sensor Data</h3>
+    <div id="sensor">No data yet.</div>
+  </div>
+
+  <div class="card">
+    <h3>LED Control</h3>
+    <button style="background:#ff0000" onclick="setColor(255,0,0)">Red</button>
+    <button style="background:#00ff00" onclick="setColor(0,255,0)">Green</button>
+    <button style="background:#0000ff; color:white" onclick="setColor(0,0,255)">Blue</button>
+    <button onclick="setColor(0,0,0)">Off</button>
+  </div>
+
+  <div class="card">
+    <h3>Log</h3>
+    <div id="log" class="log"></div>
+  </div>
+
+<script>
+let client;
+
+function log(msg) {
+  const logDiv = document.getElementById('log');
+  logDiv.textContent += msg + '\n';
+  logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+function connect() {
+  const url = document.getElementById('broker').value;
+  const base = document.getElementById('base').value;
+  log("Connecting to " + url + " ...");
+  client = mqtt.connect(url);
+
+  client.on('connect', () => {
+    log("Connected to broker");
+    document.getElementById('status').textContent = "Connected ✅";
+    client.subscribe(base + "/#");
+  });
+
+  client.on('message', (topic, msg) => {
+    const text = msg.toString();
+    log("[" + topic + "] " + text);
+
+    // If sensor topic
+    if (topic.endsWith("/bme688")) {
+      try {
+        const data = JSON.parse(text);
+        document.getElementById('sensor').innerHTML =
+          `<b>Temp:</b> ${data.temp_c.toFixed(1)} °C<br>
+           <b>Humidity:</b> ${data.hum_pct.toFixed(1)} %<br>
+           <b>Pressure:</b> ${data.press_hpa.toFixed(1)} hPa`;
+      } catch (e) {}
+    }
+  });
+}
+
+function setColor(r,g,b) {
+  const base = document.getElementById('base').value;
+  const payload = JSON.stringify({r,g,b,brightness:100});
+  client.publish(base + "/led", payload);
+  log("Sent " + payload);
+}
+</script>
+</body>
+</html>
