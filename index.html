@@ -1,89 +1,148 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>MQTT Dashboard - Sparrow Node</title>
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dan Tudose | Projects & Blog</title>
+  <meta name="description" content="Personal blog and project showcase of Dan Tudose." />
+  <link rel="icon" href="https://github.githubassets.com/favicons/favicon.png" />
+
   <style>
-    body { font-family: sans-serif; background: #fafafa; margin: 2em; }
-    .card { background: white; padding: 1em 1.5em; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.1); margin-bottom: 1.5em; max-width: 480px; }
-    .log { font-family: monospace; white-space: pre-wrap; background: #f6f6f6; padding: .5em; border-radius: 6px; height: 200px; overflow-y: auto; }
-    button { padding: 0.4em 1em; border: none; border-radius: 5px; margin-right: 0.4em; cursor: pointer; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: #f9fafb;
+      color: #111827;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #111827;
+      color: white;
+      padding: 2rem 1rem;
+      text-align: center;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 2.5rem;
+    }
+    header p {
+      color: #9ca3af;
+      margin-top: 0.5rem;
+    }
+    main {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    section {
+      margin-bottom: 3rem;
+    }
+    h2 {
+      border-bottom: 2px solid #e5e7eb;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .repo-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.2rem;
+    }
+    .repo {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      transition: box-shadow 0.2s;
+    }
+    .repo:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .repo h3 {
+      margin: 0 0 0.5rem;
+      font-size: 1.2rem;
+    }
+    .repo a {
+      text-decoration: none;
+      color: #2563eb;
+    }
+    .repo p {
+      color: #4b5563;
+      font-size: 0.95rem;
+    }
+    footer {
+      text-align: center;
+      color: #6b7280;
+      padding: 2rem;
+      font-size: 0.9rem;
+      border-top: 1px solid #e5e7eb;
+    }
+    .blog-section p {
+      color: #374151;
+    }
+    .blog-section a {
+      color: #2563eb;
+      text-decoration: none;
+    }
+    .blog-section a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
+
 <body>
-  <h2>ESP32-C6 Sparrow MQTT Dashboard</h2>
-  <div class="card">
-    <label>Broker:</label>
-    <input id="broker" value="wss://test.mosquitto.org:8081" size="40"><br><br>
-    <label>Topic Base:</label>
-    <input id="base" value="iot/yourname" size="30"><br><br>
-    <button onclick="connect()">Connect</button>
-    <span id="status">Not connected</span>
-  </div>
+  <header>
+    <h1>Dan Tudose</h1>
+    <p>Developer • Creator • Explorer</p>
+  </header>
 
-  <div class="card">
-    <h3>Sensor Data</h3>
-    <div id="sensor">No data yet.</div>
-  </div>
+  <main>
+    <section class="blog-section">
+      <h2>Welcome</h2>
+      <p>Hello! I'm <strong>Dan Tudose</strong> — welcome to my personal blog and project showcase.  
+      I love building things, learning new tech, and sharing ideas.  
+      Check out my latest GitHub projects below, or visit my <a href="https://github.com/dantudose" target="_blank">GitHub profile</a>.</p>
+    </section>
 
-  <div class="card">
-    <h3>LED Control</h3>
-    <button style="background:#ff0000" onclick="setColor(255,0,0)">Red</button>
-    <button style="background:#00ff00" onclick="setColor(0,255,0)">Green</button>
-    <button style="background:#0000ff; color:white" onclick="setColor(0,0,255)">Blue</button>
-    <button onclick="setColor(0,0,0)">Off</button>
-  </div>
+    <section>
+      <h2>Projects</h2>
+      <div id="repos" class="repo-list">
+        <p>Loading projects...</p>
+      </div>
+    </section>
+  </main>
 
-  <div class="card">
-    <h3>Log</h3>
-    <div id="log" class="log"></div>
-  </div>
+  <footer>
+    <p>© <span id="year"></span> Dan Tudose • Built with ❤️ and GitHub Pages</p>
+  </footer>
 
-<script>
-let client;
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
 
-function log(msg) {
-  const logDiv = document.getElementById('log');
-  logDiv.textContent += msg + '\n';
-  logDiv.scrollTop = logDiv.scrollHeight;
-}
-
-function connect() {
-  const url = document.getElementById('broker').value;
-  const base = document.getElementById('base').value;
-  log("Connecting to " + url + " ...");
-  client = mqtt.connect(url);
-
-  client.on('connect', () => {
-    log("Connected to broker");
-    document.getElementById('status').textContent = "Connected ✅";
-    client.subscribe(base + "/#");
-  });
-
-  client.on('message', (topic, msg) => {
-    const text = msg.toString();
-    log("[" + topic + "] " + text);
-
-    // If sensor topic
-    if (topic.endsWith("/bme688")) {
+    async function loadRepos() {
       try {
-        const data = JSON.parse(text);
-        document.getElementById('sensor').innerHTML =
-          `<b>Temp:</b> ${data.temp_c.toFixed(1)} °C<br>
-           <b>Humidity:</b> ${data.hum_pct.toFixed(1)} %<br>
-           <b>Pressure:</b> ${data.press_hpa.toFixed(1)} hPa`;
-      } catch (e) {}
-    }
-  });
-}
+        const response = await fetch('https://api.github.com/users/dantudose/repos?sort=updated');
+        const repos = await response.json();
 
-function setColor(r,g,b) {
-  const base = document.getElementById('base').value;
-  const payload = JSON.stringify({r,g,b,brightness:100});
-  client.publish(base + "/led", payload);
-  log("Sent " + payload);
-}
-</script>
+        const repoList = document.getElementById('repos');
+        repoList.innerHTML = '';
+
+        repos
+          .filter(r => !r.fork)
+          .forEach(repo => {
+            const div = document.createElement('div');
+            div.className = 'repo';
+            div.innerHTML = `
+              <h3><a href="${repo.html_url}" target="_blank">${repo.name}</a></h3>
+              <p>${repo.description ? repo.description : 'No description provided.'}</p>
+            `;
+            repoList.appendChild(div);
+          });
+      } catch (error) {
+        document.getElementById('repos').innerHTML = '<p>Failed to load projects. Please try again later.</p>';
+      }
+    }
+
+    loadRepos();
+  </script>
 </body>
 </html>
