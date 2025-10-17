@@ -168,34 +168,24 @@
     const $$ = (q, el=document) => [...el.querySelectorAll(q)];
     const fmtDate = (s) => new Date(s+"T00:00:00").toLocaleDateString(undefined, {year:'numeric', month:'short', day:'2-digit'});
 
-    // --- Sample posts ---
-    // Add/modify posts here. Each needs a unique slug.
-    const POSTS = [
-      {
-        slug: 'hello-world',
-        title: 'Hello, world — first post',
-        date: '2025-10-01',
-        tags: ['meta','intro'],
-        summary: 'Kicking off a lightweight blog on GitHub Pages with zero build tools.',
-        content: `I wanted a **dead-simple** setup for writing: just HTML, CSS, and a bit of JS.\n\nThis blog uses a tiny hash-router and an in-memory array of posts. You can view a post at \n\`#/post/hello-world\`.\n\nFuture idea: store posts as JSON files under \`/posts\` and fetch them at runtime.`,
-      },
-      {
-        slug: 'notes-on-fetch',
-        title: 'Notes on fetch() and caching',
-        date: '2025-10-05',
-        tags: ['web','js'],
-        summary: 'Practical patterns for lightweight client-side data fetching.',
-        content: `A few patterns I like:\n\n1. Prefer \`signal\` for aborting pending requests.\n2. Cache in \`sessionStorage\` for ephemeral data.\n3. Use \`Cache-Control\` headers when possible.\n\nSmall demos coming soon.`,
-      },
-      {
-        slug: 'cli-toy',
-        title: 'Shipping a tiny CLI toy',
-        date: '2025-09-20',
-        tags: ['project','fun'],
-        summary: 'A playful experiment that grew into a neat command-line helper.',
-        content: `I built a simple CLI to speed up a repetitive task. The lesson: tiny tools compound.\n\nCode lives on GitHub — more soon.`,
-      },
-    ];
+    // --- Dynamic posts (from /posts/index.json) ---
+    let POSTS = [];
+    let postsLoaded = false;
+
+    async function loadPosts(){
+      const postsEl = $('#posts');
+      if(postsEl) postsEl.innerHTML = '<p style="color:var(--muted)">Loading posts…</p>';
+      try{
+        const res = await fetch('posts/index.json', { cache: 'no-store' });
+        const data = await res.json();
+        POSTS = (data.posts||[]).map(p => ({...p}));
+        postsLoaded = true;
+        renderTags();
+        router();
+      }catch(err){
+        if(postsEl) postsEl.innerHTML = '<p style="color:var(--muted)">Failed to load posts.</p>';
+      }
+    }
 
     // --- State ---
     const state = { query:'', sort:'new', tag:null };
@@ -206,14 +196,34 @@
       const pageEl = $('#postPage');
       listEl.hidden = false; pageEl.hidden = true; pageEl.innerHTML='';
 
+      if(!postsLoaded){
+        listEl.innerHTML = '<p style="color:var(--muted)">Loading posts…</p>';
+        return;
+      }
+
       let items = [...POSTS];
-      // search
       if(state.query){
         const q = state.query.toLowerCase();
-        items = items.filter(p =>
-          [p.title, p.summary, p.content, ...(p.tags||[])].join(' ').toLowerCase().includes(q)
-        );
+        items = items.filter(p => [p.title, p.summary, p.content||'', ...(p.tags||[])].join(' ').toLowerCase().includes(q));
       }
+      if(state.tag){ items = items.filter(p => (p.tags||[]).includes(state.tag)); }
+      if(state.sort==='new'){ items.sort((a,b)=> b.date.localeCompare(a.date)); }
+      if(state.sort==='old'){ items.sort((a,b)=> a.date.localeCompare(b.date)); }
+      if(state.sort==='title'){ items.sort((a,b)=> a.title.localeCompare(b.title)); }
+
+      if(items.length===0){
+        listEl.innerHTML = `<p style="color:var(--muted)">No posts found.</p>`;
+        return;
+      }
+
+      listEl.innerHTML = items.map(p=>`
+        <article class="post-item" role="listitem">
+          <a href="#/post/${p.slug}" class="post-title">${p.title}</a>
+          <div class="post-meta">${fmtDate(p.date)} • ${(p.tags||[]).map(t=>`<span class="tag">${t}</span>`).join(' ')}</div>
+          <p>${p.summary||''}</p>
+        </article>
+      `).join('');
+    }
       // tag filter
       if(state.tag){ items = items.filter(p => (p.tags||[]).includes(state.tag)); }
       // sort
@@ -254,7 +264,7 @@
     }
 
     // --- Render post page ---
-    function renderPost(slug){
+    async function renderPost(slug){
       const post = POSTS.find(p=>p.slug===slug);
       const listEl = $('#posts');
       const pageEl = $('#postPage');
@@ -263,6 +273,15 @@
         pageEl.innerHTML = `<p style="color:var(--muted)">Post not found.</p>`; return;
       }
       listEl.hidden = true; pageEl.hidden = false;
+      // lazy-load content if needed
+      if(!post.content){
+        if(post.file){
+          try{ const res = await fetch('posts/' + post.file + '?t=' + Date.now()); post.content = await res.text(); }
+          catch(e){ post.content = 'Could not load content.'; }
+        } else {
+          post.content = post.summary || '';
+        }
+      }
       pageEl.innerHTML = `
         <article class="prose">
           <a class="btn" href="#/">← Back</a>
@@ -279,10 +298,13 @@
     // --- Tags ---
     function renderTags(){
       const tagEl = $('#tagList');
-      const all = new Set(POSTS.flatMap(p=>p.tags||[]));
-      tagEl.innerHTML = ['all', ...[...all].sort()].map(t=>{
+      const all = new Set((POSTS||[]).flatMap(p=>p.tags||[]));
+      const tags = ['all', ...[...all].sort()];
+      tagEl.innerHTML = tags.map(t=>{
         const active = (t===state.tag) || (t==='all' && state.tag===null);
         return `<a href="#/tag/${t==='all'?'all':encodeURIComponent(t)}" class="tag" style="${active? 'border-color:var(--accent); color:var(--accent)':''}">${t}</a>`;
+      }).join(' ');
+    }" class="tag" style="${active? 'border-color:var(--accent); color:var(--accent)':''}">${t}</a>`;
       }).join(' ');
     }
 
@@ -303,6 +325,18 @@
     // --- RSS (client-generated minimal feed) ---
     $('#rssBtn').addEventListener('click', ()=>{
       const items = [...POSTS].sort((a,b)=> b.date.localeCompare(a.date));
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel>
+<title>Dan Tudose — Blog</title>
+<link>https://dantudose.github.io/</link>
+<description>Personal blog</description>
+${items.map(p=>`<item><title>${p.title}</title><link>https://dantudose.github.io/#/post/${p.slug}</link><pubDate>${new Date(p.date).toUTCString()}</pubDate><description><![CDATA[${p.summary||''}]]></description></item>`).join('')}
+</channel></rss>`;
+      const blob = new Blob([xml], {type:'application/rss+xml'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='feed.xml'; a.click();
+      setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    });
       const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0"><channel>\n<title>Dan Tudose — Blog</title>\n<link>https://dantudose.github.io/</link>\n<description>Personal blog</description>\n${items.map(p=>`<item><title>${p.title}</title><link>https://dantudose.github.io/#/post/${p.slug}</link><pubDate>${new Date(p.date).toUTCString()}</pubDate><description><![CDATA[${p.summary}]]></description></item>`).join('')}\n</channel></rss>`;
       const blob = new Blob([xml], {type:'application/rss+xml'});
       const url = URL.createObjectURL(blob);
@@ -329,8 +363,7 @@
 
     // --- Boot ---
     window.addEventListener('hashchange', router);
-    router();
-    renderTags();
+    loadPosts();
     loadRepos();
     $('#year').textContent = new Date().getFullYear();
   </script>
