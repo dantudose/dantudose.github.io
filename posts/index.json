@@ -2,11 +2,11 @@
   "posts": [
     {
       "slug": "hello-world",
-      "title": "Hello, world — first post",
-      "date": "2025-10-01",
-      "tags": ["meta", "intro"],
-      "summary": "Kicking off a lightweight blog on GitHub Pages with zero build tools.",
-      "file": "hello-world.md"
+      "title": "Hacktor Watch - Open Source Smartwatch",
+      "date": "2025-10-18",
+      "tags": ["smartwatch", "opensource"],
+      "summary": "Hacktor Watch version 2.0",
+      "file": "hacktor-watch.md"
     },
     {
       "slug": "notes-on-fetch",
