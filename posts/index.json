@@ -1,0 +1,28 @@
+{
+  "posts": [
+    {
+      "slug": "hello-world",
+      "title": "Hello, world — first post",
+      "date": "2025-10-01",
+      "tags": ["meta", "intro"],
+      "summary": "Kicking off a lightweight blog on GitHub Pages with zero build tools.",
+      "file": "hello-world.md"
+    },
+    {
+      "slug": "notes-on-fetch",
+      "title": "Notes on fetch() and caching",
+      "date": "2025-10-05",
+      "tags": ["web", "js"],
+      "summary": "Practical patterns for lightweight client-side data fetching.",
+      "file": "notes-on-fetch.md"
+    },
+    {
+      "slug": "cli-toy",
+      "title": "Shipping a tiny CLI toy",
+      "date": "2025-09-20",
+      "tags": ["project", "fun"],
+      "summary": "A playful experiment that grew into a neat command-line helper.",
+      "file": "cli-toy.md"
+    }
+  ]
+}
