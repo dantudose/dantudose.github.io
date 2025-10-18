@@ -1,371 +1,147 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dan Tudose | Blog & Projects</title>
-  <meta name="description" content="Personal blog and project showcase of Dan Tudose." />
-  <meta property="og:title" content="Dan Tudose | Blog & Projects" />
-  <meta property="og:description" content="Personal blog and project showcase of Dan Tudose." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://dantudose.github.io" />
-  <link rel="icon" href="https://github.githubassets.com/favicons/favicon.png" />
-
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hacktor Watch</title>
+  <meta name="description" content="Hacktor Watch — open source smartwatch hardware and firmware.">
+  <link rel="icon" href="assets/hacktor-logo.png">
+  <link rel="preload" as="image" href="assets/watch-render-front.png">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
     :root{
-      --bg:#0b1118;        /* deep navy */
-      --card:#0f1722;      /* slightly lighter */
-      --text:#e5e7eb;      /* light gray */
-      --muted:#94a3b8;     /* slate */
-      --brand:#60a5fa;     /* sky */
-      --accent:#a78bfa;    /* violet */
-      --ring:rgba(96,165,250,.35);
+      --bg:#ffffff;
+      --text:#111827;
+      --muted:#6b7280;
+      --border:#e5e7eb;
+      --link:#2563eb;
+      --card:#fff;
+      --shadow:0 6px 18px rgba(0,0,0,.06);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root{
+        --bg:#0b0d10;
+        --text:#e5e7eb;
+        --muted:#9ca3af;
+        --border:#1f2937;
+        --link:#60a5fa;
+        --card:#111419;
+        --shadow:0 8px 30px rgba(0,0,0,.5);
+      }
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
-      background: radial-gradient(1200px 700px at 50% -200px, #172033 0, var(--bg) 60%);
-      color:var(--text);
-      line-height:1.6;
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.6}
+    a{color:var(--link);text-decoration:none}
+    .site{max-width:980px;margin:0 auto;padding:2rem 1.25rem}
+    header{display:flex;align-items:center;gap:.75rem;padding:1rem 0;border-bottom:1px solid var(--border)}
+    header img.logo{width:36px;height:36px;border-radius:8px}
+    header .name{font-weight:800;letter-spacing:.2px}
+    .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:1.25rem;align-items:center;padding:2rem 0 1rem}
+    .hero .copy h1{font-size:clamp(1.8rem,4vw,3rem);margin:.2rem 0 .5rem;font-weight:800}
+    .hero .copy p{color:var(--muted);max-width:60ch;margin:.25rem 0 1rem}
+    .hero .art{text-align:center}
+    .hero .art img{width:100%;height:auto;border-radius:14px;border:1px solid var(--border);box-shadow:var(--shadow)}
+    .cta{display:flex;flex-wrap:wrap;gap:.75rem}
+    .btn{display:inline-flex;align-items:center;gap:.5rem;border:1px solid var(--border);background:var(--card);padding:.7rem 1rem;border-radius:10px;font-weight:600;box-shadow:var(--shadow)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem;box-shadow:var(--shadow)}
+    .muted{color:var(--muted)}
+    .gallery{margin-top:.75rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem}
+    .gallery figure{margin:0;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+    .gallery img{display:block;width:100%;height:auto}
+    .gallery figcaption{padding:.6rem .8rem;color:var(--muted);font-size:.95rem}
+    /* Lightbox */
+    .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;z-index:50}
+    .lightbox.open{display:flex}
+    .lightbox img{max-width:92vw;max-height:86vh;border-radius:12px;border:1px solid rgba(255,255,255,.2)}
+    .lightbox button{position:fixed;top:14px;right:18px;background:rgba(0,0,0,.5);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:.5rem .8rem;font-weight:700;cursor:pointer}
+    footer{margin-top:3rem;padding:2rem 0;border-top:1px solid var(--border);color:var(--muted);font-size:.95rem;display:flex;align-items:center;gap:.6rem;justify-content:space-between;flex-wrap:wrap}
+    .small-logo{display:flex;align-items:center;gap:.5rem}
+    @media (max-width:860px){
+      .hero{grid-template-columns:1fr;gap:1rem}
     }
-    a{color:var(--brand); text-decoration:none}
-    a:hover{text-decoration:underline}
-
-    /* Layout */
-    .container{max-width:1100px; margin:0 auto; padding: 0 1rem}
-    header{
-      position:sticky; top:0; z-index:30;
-      backdrop-filter:saturate(120%) blur(10px);
-      background:rgba(11,17,24,.65);
-      border-bottom:1px solid rgba(99,102,241,.12);
-    }
-    .nav{display:flex; align-items:center; justify-content:space-between; padding: .9rem 0}
-    .nav a.logo{display:flex; align-items:center; gap:.6rem; color:var(--text); text-decoration:none}
-    .nav .right{display:flex; gap:.9rem; align-items:center}
-    .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.55rem .9rem; border:1px solid rgba(148,163,184,.25); border-radius:.75rem; color:var(--text); background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));}
-    .btn:hover{border-color:rgba(148,163,184,.5)}
-
-    .hero{padding: 3.2rem 0 1.6rem}
-    .hero h1{margin:0; font-size:clamp(1.8rem, 2.5vw + 1rem, 3rem)}
-    .hero p{margin:.6rem 0 0; color:var(--muted)}
-
-    .grid{display:grid; grid-template-columns: 3fr 1.2fr; gap:1.6rem}
-    @media (max-width: 900px){ .grid{grid-template-columns:1fr} }
-
-    .card{background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015)); border:1px solid rgba(148,163,184,.18); border-radius:1rem; box-shadow: 0 10px 30px rgba(0,0,0,.25);}
-    .card .card-body{padding:1rem}
-    .card h2{margin:.2rem 0 .6rem; font-size:1.2rem; letter-spacing:.2px}
-
-    /* Post list */
-    .posts{display:grid; grid-template-columns: 1fr 1fr; gap:1rem; padding:1rem}
-    @media (max-width: 720px){ .posts{grid-template-columns:1fr} }
-    .post-item{padding:1rem; border-radius:.9rem; border:1px solid rgba(148,163,184,.18); background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01)); transition: transform .18s ease, box-shadow .18s ease;}
-    .post-item:hover{transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0,0,0,.26)}
-    .post-title{margin:.1rem 0 .2rem; font-weight:600}
-    .post-meta{font-size:.9rem; color:var(--muted)}
-    .tags{display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.4rem}
-    .tag{padding:.2rem .45rem; border-radius:.5rem; font-size:.75rem; border:1px solid rgba(96,165,250,.35); color:var(--brand);}
-
-    .toolbar{display:flex; gap:.6rem; align-items:center; margin:.6rem 0 0;}
-    .input{flex:1; padding:.6rem .7rem; border-radius:.7rem; border:1px solid rgba(148,163,184,.25); background:rgba(0,0,0,.2); color:var(--text)}
-    .select{padding:.55rem .7rem; border-radius:.7rem; border:1px solid rgba(148,163,184,.25); background:rgba(0,0,0,.2); color:var(--text)}
-
-    /* Sidebar */
-    .side .card + .card{margin-top:1rem}
-    .about p{color:var(--muted); margin:.5rem 0 0}
-    .repo-list{display:grid; grid-template-columns:1fr; gap:.6rem}
-    .repo{padding:.6rem .7rem; border-radius:.7rem; border:1px solid rgba(148,163,184,.18); background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.015));}
-    .repo a{color:var(--text)}
-    .repo small{display:block; color:var(--muted)}
-
-    /* Post page */
-    .post-page{padding:1rem}
-    .post-page h1{margin:0 0 .2rem}
-    .prose p{margin: .7rem 0}
-    .prose h2{margin:1.2rem 0 .3rem}
-    .prose code{background: rgba(148,163,184,.2); padding:.1rem .25rem; border-radius:.3rem}
-    .prose pre{padding:.8rem; overflow:auto; background:#0b1220; border-radius:.6rem; border:1px solid rgba(148,163,184,.25)}
-
-    footer{margin:3rem 0 2rem; text-align:center; color:var(--muted)}
   </style>
 </head>
 <body>
-  <header>
-    <div class="container nav">
-      <a href="#/" class="logo" aria-label="Go home">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <path d="M12 3l8 6v10a2 2 0 0 1-2 2h-4v-6H10v6H6a2 2 0 0 1-2-2V9l8-6z" stroke="currentColor" stroke-width="1.2" fill="none"/>
-        </svg>
-        <strong>Dan Tudose</strong>
-      </a>
-      <div class="right">
-        <a class="btn" href="https://github.com/dantudose" target="_blank" rel="noopener">GitHub</a>
-        <a class="btn" href="#/about">About</a>
-      </div>
-    </div>
-  </header>
+  <div class="site">
+    <header>
+      <img src="assets/hacktor-logo.png" alt="Hacktor Watch logo" class="logo">
+      <div class="name">Hacktor Watch</div>
+    </header>
 
-  <main class="container">
-    <section class="hero">
-      <h1>Blog & Projects</h1>
-      <p>Notes on building, learning, and shipping. I write short entries and showcase my latest work from GitHub.</p>
-      <div class="toolbar">
-        <input id="search" class="input" placeholder="Search posts… (title, tags, content)" aria-label="Search posts" />
-        <select id="sort" class="select" aria-label="Sort posts">
-          <option value="new">Newest</option>
-          <option value="old">Oldest</option>
-          <option value="title">Title A–Z</option>
-        </select>
-        <button id="rssBtn" class="btn" title="RSS feed">RSS</button>
+    <section class="hero" id="top">
+      <div class="copy">
+        <div class="kicker muted">Open Source Smartwatch</div>
+        <h1>Build it. Program it. Wear it.</h1>
+        <p>Hacktor Watch is an open hardware smartwatch with firmware you can shape. Start from the hardware design, or boot into NuttX and Arduino to prototype your own apps.</p>
+        <div class="cta">
+          <a class="btn" href="#repos">Repositories</a>
+          <a class="btn" href="#gallery">Images & Renders</a>
+          <a class="btn" href="#getting-started">Getting Started</a>
+        </div>
+      </div>
+      <div class="art">
+        <img src="assets/watch-render-front.png" alt="Hacktor Watch front render">
       </div>
     </section>
 
-    <div class="grid">
-      <!-- Blog list / Post page -->
-      <section id="content" class="card">
-        <div class="card-body">
-          <h2>Posts</h2>
-          <div id="posts" class="posts" role="list"></div>
-          <div id="postPage" class="post-page" hidden></div>
-        </div>
-      </section>
+    <section id="repos">
+      <h2>Project Areas</h2>
+      <p class="muted">Jump straight to the parts you care about.</p>
+      <div class="grid" style="margin-top:.75rem">
+        <article class="card">
+          <h3>Hardware &amp; Mechanical Design</h3>
+          <p>KiCad schematics, PCB, enclosure and mechanical parts.</p>
+          <p><a href="https://github.com/dantudose/Hacktor-Watch-2.0/tree/main" target="_blank" rel="noopener">Open repository →</a></p>
+        </article>
+        <article class="card">
+          <h3>NuttX Port</h3>
+          <p>POSIX-friendly RTOS on the watch for real-time apps.</p>
+          <p><a href="https://github.com/radupascale/nuttx/tree/master" target="_blank" rel="noopener">Open repository →</a></p>
+        </article>
+        <article class="card">
+          <h3>Arduino Port</h3>
+          <p>Arduino-compatible APIs to prototype quickly and teach.</p>
+          <p><a href="https://github.com/dantudose/Hacktor" target="_blank" rel="noopener">Open repository →</a></p>
+        </article>
+      </div>
+    </section>
 
-      <!-- Sidebar -->
-      <aside class="side">
-        <div class="card about">
-          <div class="card-body">
-            <h2>About</h2>
-            <p>Hi, I'm Dan — a developer who enjoys building useful things, exploring new tech, and writing down what I learn. This site is built with plain HTML, CSS, and a dash of JavaScript, hosted on GitHub Pages.</p>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-body">
-            <h2>Tags</h2>
-            <div id="tagList" class="tags"></div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-body">
-            <h2>Latest Projects</h2>
-            <div id="repos" class="repo-list"><small>Loading…</small></div>
-          </div>
-        </div>
-      </aside>
-    </div>
 
     <footer>
-      <small>© <span id="year"></span> Dan Tudose • Built with ❤️ and GitHub Pages</small>
+      <div class="small-logo">
+        <img src="assets/hacktor-logo.png" alt="Hacktor Watch" width="28" height="28">
+        <strong>Hacktor Watch</strong>
+      </div>
+      <div>&copy; <span id="y"></span> Hacktor Watch — Images embedded locally for GitHub Pages.</div>
     </footer>
-  </main>
+  </div>
+
+  <div class="lightbox" id="lb" aria-hidden="true">
+    <button id="lb-close" aria-label="Close image">✕ Close</button>
+    <img alt="Preview">
+  </div>
 
   <script>
-    // --- Utilities ---
-    const $ = (q, el=document) => el.querySelector(q);
-    const $$ = (q, el=document) => [...el.querySelectorAll(q)];
-    const fmtDate = (s) => new Date(s+"T00:00:00").toLocaleDateString(undefined, {year:'numeric', month:'short', day:'2-digit'});
+    // Year
+    document.getElementById('y').textContent = new Date().getFullYear();
 
-    // --- Dynamic posts (from /posts/index.json) ---
-    let POSTS = [];
-    let postsLoaded = false;
-
-    async function loadPosts(){
-      const postsEl = $('#posts');
-      if(postsEl) postsEl.innerHTML = '<p style="color:var(--muted)">Loading posts…</p>';
-      try{
-        const res = await fetch('posts/index.json', { cache: 'no-store' });
-        const data = await res.json();
-        POSTS = (data.posts||[]).map(p => ({...p}));
-        postsLoaded = true;
-        renderTags();
-        router();
-      }catch(err){
-        if(postsEl) postsEl.innerHTML = '<p style="color:var(--muted)">Failed to load posts.</p>';
-      }
-    }
-
-    // --- State ---
-    const state = { query:'', sort:'new', tag:null };
-
-    // --- Render list ---
-    function renderList(){
-      const listEl = $('#posts');
-      const pageEl = $('#postPage');
-      listEl.hidden = false; pageEl.hidden = true; pageEl.innerHTML='';
-
-      if(!postsLoaded){
-        listEl.innerHTML = '<p style="color:var(--muted)">Loading posts…</p>';
-        return;
-      }
-
-      let items = [...POSTS];
-      if(state.query){
-        const q = state.query.toLowerCase();
-        items = items.filter(p => [p.title, p.summary, p.content||'', ...(p.tags||[])].join(' ').toLowerCase().includes(q));
-      }
-      if(state.tag){ items = items.filter(p => (p.tags||[]).includes(state.tag)); }
-      if(state.sort==='new'){ items.sort((a,b)=> b.date.localeCompare(a.date)); }
-      if(state.sort==='old'){ items.sort((a,b)=> a.date.localeCompare(b.date)); }
-      if(state.sort==='title'){ items.sort((a,b)=> a.title.localeCompare(b.title)); }
-
-      if(items.length===0){
-        listEl.innerHTML = `<p style="color:var(--muted)">No posts found.</p>`;
-        return;
-      }
-
-      listEl.innerHTML = items.map(p=>`
-        <article class="post-item" role="listitem">
-          <a href="#/post/${p.slug}" class="post-title">${p.title}</a>
-          <div class="post-meta">${fmtDate(p.date)} • ${(p.tags||[]).map(t=>`<span class="tag">${t}</span>`).join(' ')}</div>
-          <p>${p.summary||''}</p>
-        </article>
-      `).join('');
-    }
-      // tag filter
-      if(state.tag){ items = items.filter(p => (p.tags||[]).includes(state.tag)); }
-      // sort
-      if(state.sort==='new'){ items.sort((a,b)=> b.date.localeCompare(a.date)); }
-      if(state.sort==='old'){ items.sort((a,b)=> a.date.localeCompare(b.date)); }
-      if(state.sort==='title'){ items.sort((a,b)=> a.title.localeCompare(b.title)); }
-
-      // empty state
-      if(items.length===0){
-        listEl.innerHTML = `<p style="color:var(--muted)">No posts found.</p>`;
-        return;
-      }
-
-      listEl.innerHTML = items.map(p=>`
-        <article class="post-item" role="listitem">
-          <a href="#/post/${p.slug}" class="post-title">${p.title}</a>
-          <div class="post-meta">${fmtDate(p.date)} • ${(p.tags||[]).map(t=>`<span class="tag">${t}</span>`).join(' ')}</div>
-          <p>${p.summary}</p>
-        </article>
-      `).join('');
-    }
-
-    // --- Very tiny Markdown -> HTML (bold, code, lists, paragraphs, headings) ---
-    function miniMD(md){
-      let html = md
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      html = html.replace(/^###\s?(.*)$/gm,'<h3>$1<\/h3>')
-                 .replace(/^##\s?(.*)$/gm,'<h2>$1<\/h2>')
-                 .replace(/^#\s?(.*)$/gm,'<h1>$1<\/h1>')
-                 .replace(/\*\*(.*?)\*\*/g,'<strong>$1<\/strong>')
-                 .replace(/`([^`]+)`/g,'<code>$1<\/code>');
-      // lists
-      html = html.replace(/(^|\n)-(.*)(?=\n|$)/g, (m, a, b)=>`${a}<li>${b.trim()}<\/li>`)
-                 .replace(/(<li>.*<\/li>\n?)+/g, (m)=>`<ul>${m}<\/ul>`);
-      // paragraphs
-      html = html.split(/\n\n+/).map(blk=> /<h\d|<ul>|<pre>|<p>|<blockquote>/.test(blk)? blk: `<p>${blk.replace(/\n/g,'<br>')}<\/p>`).join('\n');
-      return html;
-    }
-
-    // --- Render post page ---
-    async function renderPost(slug){
-      const post = POSTS.find(p=>p.slug===slug);
-      const listEl = $('#posts');
-      const pageEl = $('#postPage');
-      if(!post){
-        listEl.hidden = true; pageEl.hidden = false;
-        pageEl.innerHTML = `<p style="color:var(--muted)">Post not found.</p>`; return;
-      }
-      listEl.hidden = true; pageEl.hidden = false;
-      // lazy-load content if needed
-      if(!post.content){
-        if(post.file){
-          try{ const res = await fetch('posts/' + post.file + '?t=' + Date.now()); post.content = await res.text(); }
-          catch(e){ post.content = 'Could not load content.'; }
-        } else {
-          post.content = post.summary || '';
-        }
-      }
-      pageEl.innerHTML = `
-        <article class="prose">
-          <a class="btn" href="#/">← Back</a>
-          <h1>${post.title}</h1>
-          <div class="post-meta">${fmtDate(post.date)} • ${(post.tags||[]).map(t=>`<span class="tag">${t}</span>`).join(' ')}</div>
-          <div>${miniMD(post.content)}</div>
-        </article>
-      `;
-      // Update meta
-      document.title = `${post.title} | Dan Tudose`;
-      const og = document.querySelector('meta[property="og:title"]'); if(og) og.setAttribute('content', post.title);
-    }
-
-    // --- Tags ---
-    function renderTags(){
-      const tagEl = $('#tagList');
-      const all = new Set((POSTS||[]).flatMap(p=>p.tags||[]));
-      const tags = ['all', ...[...all].sort()];
-      tagEl.innerHTML = tags.map(t=>{
-        const active = (t===state.tag) || (t==='all' && state.tag===null);
-        return `<a href="#/tag/${t==='all'?'all':encodeURIComponent(t)}" class="tag" style="${active? 'border-color:var(--accent); color:var(--accent)':''}">${t}</a>`;
-      }).join(' ');
-    }" class="tag" style="${active? 'border-color:var(--accent); color:var(--accent)':''}">${t}</a>`;
-      }).join(' ');
-    }
-
-    // --- Router ---
-    function router(){
-      const hash = location.hash || '#/';
-      const [_, route, param] = hash.split('/');
-      if(route==='post' && param){ renderPost(decodeURIComponent(param)); return; }
-      if(route==='tag' && param){ state.tag = (param==='all'? null : decodeURIComponent(param)); renderTags(); renderList(); return; }
-      // default home
-      state.tag = null; renderTags(); renderList(); document.title = 'Dan Tudose | Blog & Projects';
-    }
-
-    // --- Search & sort ---
-    $('#search').addEventListener('input', (e)=>{ state.query = e.target.value.trim(); renderList(); });
-    $('#sort').addEventListener('change', (e)=>{ state.sort = e.target.value; renderList(); });
-
-    // --- RSS (client-generated minimal feed) ---
-    $('#rssBtn').addEventListener('click', ()=>{
-      const items = [...POSTS].sort((a,b)=> b.date.localeCompare(a.date));
-      const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0"><channel>
-<title>Dan Tudose — Blog</title>
-<link>https://dantudose.github.io/</link>
-<description>Personal blog</description>
-${items.map(p=>`<item><title>${p.title}</title><link>https://dantudose.github.io/#/post/${p.slug}</link><pubDate>${new Date(p.date).toUTCString()}</pubDate><description><![CDATA[${p.summary||''}]]></description></item>`).join('')}
-</channel></rss>`;
-      const blob = new Blob([xml], {type:'application/rss+xml'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href=url; a.download='feed.xml'; a.click();
-      setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    // Lightweight lightbox
+    const lb = document.getElementById('lb');
+    const lbImg = lb.querySelector('img');
+    const close = () => { lb.classList.remove('open'); lb.setAttribute('aria-hidden','true'); }
+    document.getElementById('lb-close').addEventListener('click', close);
+    lb.addEventListener('click', (e) => { if(e.target === lb) close(); });
+    document.querySelectorAll('#gallery img').forEach(img => {
+      img.style.cursor = 'zoom-in';
+      img.addEventListener('click', () => {
+        lbImg.src = img.dataset.full || img.src;
+        lb.classList.add('open');
+        lb.setAttribute('aria-hidden','false');
+      });
     });
-      const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0"><channel>\n<title>Dan Tudose — Blog</title>\n<link>https://dantudose.github.io/</link>\n<description>Personal blog</description>\n${items.map(p=>`<item><title>${p.title}</title><link>https://dantudose.github.io/#/post/${p.slug}</link><pubDate>${new Date(p.date).toUTCString()}</pubDate><description><![CDATA[${p.summary}]]></description></item>`).join('')}\n</channel></rss>`;
-      const blob = new Blob([xml], {type:'application/rss+xml'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href=url; a.download='feed.xml'; a.click();
-      setTimeout(()=>URL.revokeObjectURL(url), 2000);
-    });
-
-    // --- GitHub Projects ---
-    async function loadRepos(){
-      try{
-        const cacheKey = 'gh_repos_cache_v1';
-        const cached = sessionStorage.getItem(cacheKey);
-        let repos;
-        if(cached){ repos = JSON.parse(cached); }
-        else{
-          const res = await fetch('https://api.github.com/users/dantudose/repos?sort=updated');
-          repos = await res.json();
-          sessionStorage.setItem(cacheKey, JSON.stringify(repos));
-        }
-        const list = (repos||[]).filter(r=>!r.fork).slice(0,6);
-        $('#repos').innerHTML = list.map(r=>`<div class="repo"><a href="${r.html_url}" target="_blank" rel="noopener">${r.name}</a><small>${r.description??'—'}</small></div>`).join('');
-      }catch(err){ $('#repos').innerHTML = '<small style="color:var(--muted)">Failed to load.</small>'; }
-    }
-
-    // --- Boot ---
-    window.addEventListener('hashchange', router);
-    loadPosts();
-    loadRepos();
-    $('#year').textContent = new Date().getFullYear();
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') close(); });
   </script>
 </body>
 </html>
