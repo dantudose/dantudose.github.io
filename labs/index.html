@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32 CoAP Console</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 1.5rem;
+      background: #f7f7f7;
+      color: #222;
+    }
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 12px 24px -20px rgba(0,0,0,0.4);
+    }
+    h1 {
+      margin-top: 0;
+    }
+    fieldset {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 1rem 1.5rem 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    legend {
+      font-weight: 600;
+      padding: 0 0.5rem;
+    }
+    label {
+      display: inline-block;
+      margin-bottom: 0.35rem;
+      font-weight: 500;
+    }
+    input[type="text"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border-radius: 8px;
+      border: 1px solid #bbb;
+      font-size: 0.95rem;
+      font-family: inherit;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    textarea {
+      min-height: 120px;
+    }
+    .grid {
+      display: grid;
+      gap: 1rem;
+    }
+    .grid.two {
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+    button {
+      background: #0070f3;
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 0.6rem 1.4rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px -12px rgba(0,0,0,0.6);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+    pre {
+      background: #1e1e1e;
+      color: #f1f1f1;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow: auto;
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    ul.resource-list {
+      list-style: none;
+      padding-left: 0;
+      margin: 0;
+      display: grid;
+      gap: 0.5rem;
+    }
+    ul.resource-list li {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .resource-btn {
+      border-radius: 999px;
+      background: #111;
+      color: #fff;
+      border: none;
+      padding: 0.3rem 0.8rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .resource-btn:hover {
+      opacity: 0.85;
+    }
+    .resource-meta {
+      font-size: 0.8rem;
+      color: #666;
+    }
+    .flex {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .flex button {
+      flex: 1 1 auto;
+    }
+    .inline-field {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    .inline-field label {
+      margin: 0;
+    }
+    .status {
+      font-size: 0.9rem;
+      color: #444;
+    }
+    .muted {
+      color: #6b6b6b;
+    }
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: #111;
+        color: #f1f1f1;
+      }
+      main {
+        background: #1c1c1c;
+        box-shadow: none;
+      }
+      fieldset {
+        border-color: #333;
+      }
+      input,
+      textarea,
+      select {
+        background: #111;
+        color: inherit;
+        border-color: #333;
+      }
+      pre {
+        background: #0b0b0b;
+        color: #d1f2ff;
+      }
+      .status {
+        color: #bbb;
+      }
+      .muted {
+        color: #8b8b8b;
+      }
+      .resource-btn {
+        background: #333;
+      }
+      .resource-meta {
+        color: #aaa;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>ESP32 CoAP Console</h1>
+    <p class="muted">
+      Use this dashboard with the companion HTTP↔︎CoAP proxy to send requests to your ESP32 server.
+      Configure the proxy endpoint below, then explore the available resources.
+    </p>
+
+    <fieldset>
+      <legend>Proxy connection</legend>
+      <div class="grid two">
+        <label>
+          Proxy base URL
+          <input id="proxyBaseUrl" type="text" value="http://localhost:8080" placeholder="http://host:port">
+        </label>
+        <label>
+          CoAP host
+          <input id="coapHost" type="text" value="192.168.4.1" placeholder="e.g. 192.168.1.42">
+        </label>
+      </div>
+      <div class="grid two">
+        <label>
+          CoAP port
+          <input id="coapPort" type="text" value="5683">
+        </label>
+        <label>
+          Default resource path
+          <input id="coapPath" type="text" value="/.well-known/core">
+        </label>
+      </div>
+      <p class="status" id="connectionStatus">Proxy ready (no requests sent yet)</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Quick actions</legend>
+      <div class="flex">
+        <button data-method="GET" data-path="/sys/uptime">GET /sys/uptime</button>
+        <button data-method="GET" data-path="/net/rssi">GET /net/rssi</button>
+        <button data-method="GET" data-path="/led">GET /led</button>
+        <button data-method="PUT" data-path="/led" data-payload="on">PUT /led → on</button>
+        <button data-method="PUT" data-path="/led" data-payload="off">PUT /led → off</button>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Custom request</legend>
+      <div class="grid two">
+        <label>
+          Method
+          <select id="method">
+            <option value="GET">GET</option>
+            <option value="PUT">PUT</option>
+            <option value="POST">POST</option>
+            <option value="DELETE">DELETE</option>
+          </select>
+        </label>
+        <label>
+          Resource path
+          <input id="path" type="text" placeholder="/resource" value="/.well-known/core">
+        </label>
+      </div>
+      <label>
+        Payload (optional)
+        <textarea id="payload" placeholder="Text payload for PUT/POST"></textarea>
+      </label>
+      <div class="flex">
+        <button id="sendBtn">Send request</button>
+        <button id="discoverBtn">Discover resources (.well-known/core)</button>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Discovered resources</legend>
+      <ul id="resourceList" class="resource-list muted">
+        <li>(run discovery to populate)</li>
+      </ul>
+    </fieldset>
+
+    <fieldset>
+      <legend>Response</legend>
+      <div class="grid two">
+        <div>
+          <strong>Status:</strong>
+          <span id="responseStatus" class="muted">–</span>
+        </div>
+        <div>
+          <strong>Elapsed:</strong>
+          <span id="responseTime" class="muted">–</span>
+        </div>
+      </div>
+      <label>
+        Body
+        <pre id="responseBody">(no response yet)</pre>
+      </label>
+    </fieldset>
+  </main>
+
+  <script>
+    const $ = (selector) => document.querySelector(selector);
+    const proxyBaseUrlInput = $('#proxyBaseUrl');
+    const coapHostInput = $('#coapHost');
+    const coapPortInput = $('#coapPort');
+    const coapPathInput = $('#coapPath');
+    const methodSelect = $('#method');
+    const pathInput = $('#path');
+    const payloadInput = $('#payload');
+    const sendBtn = $('#sendBtn');
+    const discoverBtn = $('#discoverBtn');
+    const responseStatus = $('#responseStatus');
+    const responseTime = $('#responseTime');
+    const responseBody = $('#responseBody');
+    const connectionStatus = $('#connectionStatus');
+    const resourceList = $('#resourceList');
+
+    function buildProxyUrl(endpoint) {
+      const base = proxyBaseUrlInput.value.replace(/\/+$/, '');
+      const url = new URL(endpoint, base + '/');
+      url.searchParams.set('host', coapHostInput.value.trim());
+      url.searchParams.set('port', coapPortInput.value.trim() || '5683');
+      return url;
+    }
+
+    async function sendRequest({ method, path, payload }) {
+      const url = buildProxyUrl('/api/coap');
+      url.searchParams.set('method', method);
+      url.searchParams.set('path', path.startsWith('/') ? path : '/' + path);
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12_000);
+      const init = {
+        method: method === 'GET' ? 'GET' : 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: method === 'GET' ? undefined : JSON.stringify({ method, payload })
+      };
+
+      const started = performance.now();
+      setBusy(true);
+      try {
+        const res = await fetch(url.toString(), init);
+        const elapsed = performance.now() - started;
+        responseTime.textContent = `${elapsed.toFixed(0)} ms`;
+        const text = await res.text();
+        const info = interpretResponse(res, text);
+        responseStatus.textContent = info.statusLabel;
+        responseBody.textContent = info.bodyText;
+        if (info.resources && info.resources.length) {
+          renderResourceList(info.resources);
+        }
+        updateConnectionStatus('✓ Request completed', 'success');
+      } catch (err) {
+        responseStatus.textContent = 'Request failed';
+        responseTime.textContent = '–';
+        responseBody.textContent = err.name === 'AbortError'
+          ? 'Timed out while waiting for the proxy.'
+          : formatBody(err.message || String(err));
+        updateConnectionStatus('✕ Error talking to proxy', 'error');
+      } finally {
+        clearTimeout(timeout);
+        setBusy(false);
+      }
+    }
+
+    async function discoverResources() {
+      const url = buildProxyUrl('/api/discover');
+      const started = performance.now();
+      setBusy(true);
+      try {
+        const res = await fetch(url.toString());
+        const elapsed = performance.now() - started;
+        responseTime.textContent = `${elapsed.toFixed(0)} ms`;
+        const text = await res.text();
+        const info = interpretResponse(res, text);
+        responseStatus.textContent = info.statusLabel;
+        responseBody.textContent = info.bodyText;
+        if (info.resources && info.resources.length) {
+          renderResourceList(info.resources);
+        }
+        updateConnectionStatus('✓ Discovery completed', 'success');
+      } catch (err) {
+        responseStatus.textContent = 'Discovery failed';
+        responseTime.textContent = '–';
+        responseBody.textContent = formatBody(err.message || String(err));
+        updateConnectionStatus('✕ Error during discovery', 'error');
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function formatBody(text) {
+      if (!text) return '(empty response)';
+      const trimmed = text.trim();
+      if (!trimmed) return '(empty response)';
+      try {
+        const json = JSON.parse(trimmed);
+        return JSON.stringify(json, null, 2);
+      } catch (_) {
+        return trimmed;
+      }
+    }
+
+    function interpretResponse(res, rawText) {
+      const statusBase = `${res.status} ${res.statusText}`;
+      const trimmed = rawText ? rawText.trim() : '';
+      if (!trimmed) {
+        return {
+          statusLabel: statusBase,
+          bodyText: '(empty response)'
+        };
+      }
+      try {
+        const json = JSON.parse(trimmed);
+        let bodyText;
+        let statusLabel = statusBase;
+        if (json.coapCode) {
+          statusLabel += ` · CoAP ${json.coapCode}`;
+        }
+        let resources;
+        if (json.error) {
+          bodyText = json.error;
+        } else if (json.payload !== undefined) {
+          if (typeof json.payload === 'string') {
+            if (json.payload.trim()) {
+              resources = parseLinkFormat(json.payload.trim());
+              bodyText = formatLinkFormat(json.payload.trim());
+            } else {
+              bodyText = '(empty payload)';
+            }
+          } else {
+            bodyText = JSON.stringify(json.payload, null, 2);
+          }
+        } else {
+          bodyText = JSON.stringify(json, null, 2);
+        }
+        if (Array.isArray(json.options) && json.options.length) {
+          bodyText += `\n\n---\nOptions:\n${JSON.stringify(json.options, null, 2)}`;
+        }
+        return { statusLabel, bodyText, resources };
+      } catch (_) {
+        const resources = parseLinkFormat(trimmed);
+        return {
+          statusLabel: statusBase,
+          bodyText: formatLinkFormat(trimmed),
+          resources
+        };
+      }
+    }
+
+    function formatLinkFormat(text) {
+      if (!text.includes('</')) return text;
+      return text.replace(/>,\s*/g, '>\n');
+    }
+
+    function parseLinkFormat(text) {
+      if (!text.includes('</')) return [];
+      return text.split(',').map(entry => entry.trim()).filter(Boolean).map(entry => {
+        const [pathPart, ...attrParts] = entry.split(';');
+        const pathMatch = pathPart.match(/<([^>]+)>/);
+        const path = pathMatch ? pathMatch[1] : pathPart;
+        const attrs = {};
+        attrParts.forEach(attr => {
+          const [rawKey, rawValue] = attr.split('=');
+          if (!rawKey) return;
+          const key = rawKey.trim();
+          if (!key) return;
+          if (rawValue === undefined) {
+            attrs[key] = true;
+          } else {
+            const cleaned = rawValue.replace(/^"|"$/g, '');
+            let decoded;
+            try {
+              decoded = decodeURIComponent(cleaned);
+            } catch (_) {
+              decoded = cleaned;
+            }
+            attrs[key] = decoded;
+          }
+        });
+        return { path, attrs };
+      });
+    }
+
+    function renderResourceList(resources) {
+      resourceList.innerHTML = '';
+      resources.forEach(resource => {
+        const li = document.createElement('li');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = resource.path;
+        btn.addEventListener('click', () => {
+          methodSelect.value = 'GET';
+          pathInput.value = resource.path;
+          sendRequest({ method: 'GET', path: resource.path, payload: '' });
+        });
+        btn.className = 'resource-btn';
+
+        const attrEntries = Object.entries(resource.attrs);
+        const meta = document.createElement('div');
+        meta.className = 'resource-meta';
+        if (attrEntries.length) {
+          meta.innerHTML = attrEntries.map(([key, value]) => {
+            if (value === true) {
+              return `<code>${key}</code>`;
+            }
+            return `<code>${key}</code>=${value}`;
+          }).join(' ');
+        }
+
+        li.appendChild(btn);
+        if (attrEntries.length) {
+          li.appendChild(meta);
+        }
+        resourceList.appendChild(li);
+      });
+      if (!resources.length) {
+        const li = document.createElement('li');
+        li.textContent = '(no resources reported)';
+        resourceList.appendChild(li);
+      }
+    }
+
+    function setBusy(isBusy) {
+      sendBtn.disabled = isBusy;
+      discoverBtn.disabled = isBusy;
+      document.querySelectorAll('button[data-method]').forEach(btn => {
+        btn.disabled = isBusy;
+      });
+    }
+
+    function updateConnectionStatus(message, variant) {
+      connectionStatus.textContent = message;
+      connectionStatus.className = 'status';
+      if (variant === 'error') {
+        connectionStatus.style.color = '#d12f2f';
+      } else if (variant === 'success') {
+        connectionStatus.style.color = '#168042';
+      } else {
+        connectionStatus.style.color = '';
+      }
+    }
+
+    sendBtn.addEventListener('click', () => {
+      const method = methodSelect.value;
+      const path = pathInput.value.trim() || coapPathInput.value.trim();
+      const payload = payloadInput.value;
+      sendRequest({ method, path, payload });
+    });
+
+    discoverBtn.addEventListener('click', () => {
+      discoverResources();
+    });
+
+    document.querySelectorAll('button[data-method]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const method = btn.dataset.method;
+        const path = btn.dataset.path;
+        const payload = btn.dataset.payload || '';
+        methodSelect.value = method === 'PUT' || method === 'POST' ? method : methodSelect.value;
+        pathInput.value = path;
+        payloadInput.value = payload;
+        sendRequest({ method, path, payload });
+      });
+    });
+
+    // Auto-populate custom fields if defaults change
+    coapPathInput.addEventListener('change', () => {
+      if (!pathInput.value || pathInput.value === '/.well-known/core') {
+        pathInput.value = coapPathInput.value;
+      }
+    });
+  </script>
+</body>
+</html>
