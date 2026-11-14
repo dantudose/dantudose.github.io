@@ -1,0 +1,652 @@
+/* Signal & Noise — design tokens, base styles and long-form typography. */
+
+/* ---------- Tokens ---------- */
+
+:root {
+  color-scheme: light dark;
+
+  --bg: light-dark(#f6f4ee, #0e0f11);
+  --surface: light-dark(#fcfbf8, #16171a);
+  --sunken: light-dark(#ece9e0, #1d1e23);
+  --ink: light-dark(#18181b, #eceae4);
+  --ink-2: light-dark(#45454b, #b7b5ae);
+  --muted: light-dark(#6c6b70, #8b8a84);
+  --rule: light-dark(#dcd8ce, #2a2b30);
+  --accent: light-dark(#c2410c, #ff7a45);
+  --accent-vivid: light-dark(#ea580c, #ff6b2c);
+  --selection: light-dark(#fbd9c5, #5a2a14);
+
+  --font-serif: 'Newsreader Variable', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+
+  --wrap: 68rem;
+  --measure: 41rem;
+  --gutter: clamp(1.25rem, 4vw, 2.5rem);
+  --radius: 6px;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+/* Browsers without light-dark() get the light palette. */
+@supports not (color: light-dark(#000, #fff)) {
+  :root {
+    --bg: #f6f4ee;
+    --surface: #fcfbf8;
+    --sunken: #ece9e0;
+    --ink: #18181b;
+    --ink-2: #45454b;
+    --muted: #6c6b70;
+    --rule: #dcd8ce;
+    --accent: #c2410c;
+    --accent-vivid: #ea580c;
+    --selection: #fbd9c5;
+  }
+}
+
+/* ---------- Base ---------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-padding-top: 2rem;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 1.125rem;
+  line-height: 1.6;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+main {
+  flex: 1;
+}
+
+::selection {
+  background: var(--selection);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+
+p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+img {
+  height: auto;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+
+/* ---------- Shared pieces ---------- */
+
+.wrap {
+  width: 100%;
+  max-width: calc(var(--wrap) + 2 * var(--gutter));
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* Small uppercase monospace text: dates, labels, navigation. */
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.mono a {
+  text-decoration: none;
+}
+
+.mono a:hover {
+  color: var(--accent);
+}
+
+.skip {
+  position: absolute;
+  left: var(--gutter);
+  top: -4rem;
+  z-index: 10;
+  padding: 0.5rem 0.9rem;
+  background: var(--ink);
+  color: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  text-decoration: none;
+  border-radius: var(--radius);
+}
+
+.skip:focus {
+  top: 0.75rem;
+}
+
+/* Section heading: a heavy rule with a label on the left and an optional link on the right. */
+.label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.label a {
+  font-weight: 400;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.label a:hover {
+  color: var(--accent);
+}
+
+/* Page heading used by the index pages. */
+.page-head {
+  padding-block: clamp(2.5rem, 7vw, 5rem) clamp(2rem, 4vw, 3rem);
+}
+
+.page-head h1 {
+  font-size: clamp(2.5rem, 6.5vw, 4.25rem);
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  font-weight: 400;
+}
+
+.page-head .lede {
+  margin-top: 1rem;
+}
+
+.lede {
+  max-width: 38rem;
+  font-size: clamp(1.2rem, 2.2vw, 1.4rem);
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+.crumb {
+  margin-bottom: 1.25rem;
+}
+
+.empty {
+  padding-block: 2rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.section {
+  padding-bottom: clamp(3rem, 7vw, 5rem);
+}
+
+/* ---------- Long-form text ---------- */
+
+.prose {
+  max-width: var(--measure);
+  font-size: 1.1875rem;
+  line-height: 1.68;
+  overflow-wrap: break-word;
+}
+
+.prose > * + * {
+  margin-top: 1.35em;
+}
+
+.prose h2 {
+  margin-top: 2.4em;
+  font-size: 1.7rem;
+  letter-spacing: -0.018em;
+}
+
+.prose h3 {
+  margin-top: 2em;
+  font-size: 1.3rem;
+}
+
+.prose h4 {
+  margin-top: 1.8em;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.prose h2 + *,
+.prose h3 + *,
+.prose h4 + * {
+  margin-top: 0.75em;
+}
+
+.prose > :first-child {
+  margin-top: 0;
+}
+
+.prose a {
+  color: var(--accent);
+  text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  transition: text-decoration-color 0.15s;
+}
+
+.prose a:hover {
+  text-decoration-color: currentColor;
+}
+
+.prose strong {
+  font-weight: 650;
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 1.3em;
+}
+
+.prose li + li {
+  margin-top: 0.4em;
+}
+
+.prose li::marker {
+  color: var(--muted);
+}
+
+.prose ol > li::marker {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+}
+
+.prose li > ul,
+.prose li > ol {
+  margin-top: 0.4em;
+}
+
+.prose blockquote {
+  margin-inline: 0;
+  padding-left: 1.25rem;
+  border-left: 2px solid var(--accent);
+  font-style: italic;
+  color: var(--ink-2);
+}
+
+.prose hr {
+  margin-block: 2.75em;
+  border: 0;
+  border-top: 1px solid var(--rule);
+}
+
+/* Figures are numbered automatically, datasheet style. */
+.prose {
+  counter-reset: figure;
+}
+
+.prose figure {
+  margin-inline: 0;
+  margin-block: 2.2em;
+  counter-increment: figure;
+}
+
+.prose figure img,
+.prose > p > img,
+.prose > img {
+  width: 100%;
+  border-radius: var(--radius);
+  background: #fff;
+  border: 1px solid var(--rule);
+}
+
+.prose figure img {
+  cursor: zoom-in;
+}
+
+/* A linked image goes to its link instead of zooming. */
+.prose figure a {
+  display: block;
+}
+
+.prose figure a img {
+  cursor: pointer;
+}
+
+.prose figure video {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--rule);
+  background: var(--sunken);
+}
+
+/* For portrait photos and videos that would otherwise fill the screen: <figure class="narrow">. */
+.prose figure.narrow {
+  max-width: 26rem;
+}
+
+/* Several images in one paragraph sit side by side; the column count comes from markdown-plugins.mjs. */
+.prose figure.gallery {
+  display: grid;
+  grid-template-columns: repeat(var(--columns, 2), minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.prose figure.gallery img {
+  height: 100%;
+  object-fit: cover;
+}
+
+.prose figure.gallery figcaption {
+  grid-column: 1 / -1;
+  margin-top: 0.1rem;
+}
+
+.prose figcaption {
+  margin-top: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.prose figcaption::before {
+  content: 'Fig. ' counter(figure) '\2002';
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* Tables read like a spec sheet. */
+.prose .table-scroll {
+  overflow-x: auto;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+}
+
+.prose th,
+.prose td {
+  padding: 0.6rem 1.25rem 0.6rem 0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.prose th:last-child,
+.prose td:last-child {
+  padding-right: 0;
+}
+
+.prose th {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.prose td {
+  border-top: 1px solid var(--rule);
+}
+
+.prose td:first-child {
+  color: var(--ink);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.prose td:not(:first-child) {
+  color: var(--ink-2);
+}
+
+/* Bold cells, such as a totals row, stand out by color: the monospace font has no heavier weight. */
+.prose td strong {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* Tables with five or more columns wrap their headers and first column, so they fit the page. */
+.prose table:has(th:nth-child(5)) :is(th, td:first-child) {
+  white-space: normal;
+}
+
+.prose table:has(th:nth-child(5)) :is(th, td) {
+  padding-right: 0.9rem;
+}
+
+/* Code */
+.prose :not(pre) > code {
+  padding: 0.12em 0.36em;
+  font-family: var(--font-mono);
+  font-size: 0.84em;
+  background: var(--sunken);
+  border-radius: 4px;
+}
+
+.prose pre {
+  margin-inline: 0;
+  padding: 1.05rem 1.2rem;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+  line-height: 1.65;
+  background: var(--surface) !important;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  tab-size: 2;
+}
+
+.prose pre code {
+  font: inherit;
+}
+
+.astro-code,
+.astro-code span {
+  color: light-dark(var(--shiki-light), var(--shiki-dark));
+}
+
+.code-block {
+  position: relative;
+}
+
+.code-block .copy {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.25rem 0.55rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.code-block:hover .copy,
+.code-block .copy:focus-visible,
+.code-block .copy[data-copied] {
+  opacity: 1;
+}
+
+.code-block .copy:hover,
+.code-block .copy[data-copied] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+@media (hover: none) {
+  .code-block .copy {
+    opacity: 1;
+  }
+}
+
+.prose kbd {
+  padding: 0.1em 0.4em;
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  border: 1px solid var(--rule);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+}
+
+.prose sup a {
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+.prose .footnotes {
+  margin-top: 3em;
+  padding-top: 1em;
+  border-top: 1px solid var(--rule);
+  font-size: 0.95rem;
+  color: var(--ink-2);
+}
+
+.prose .footnotes h2 {
+  margin-top: 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Notes shown in full on the Notes page use a slightly smaller text size. */
+.prose.compact {
+  font-size: 1.0625rem;
+  line-height: 1.62;
+}
+
+/* ---------- Image zoom ---------- */
+
+.zoom {
+  --pad: clamp(0.75rem, 3vw, 2.5rem);
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: var(--pad);
+  border: 0;
+  background: transparent;
+  cursor: zoom-out;
+}
+
+.zoom[open] {
+  display: grid;
+  place-items: center;
+}
+
+.zoom::backdrop {
+  background: color-mix(in srgb, #08090a 88%, transparent);
+}
+
+.zoom a {
+  position: fixed;
+  top: 0.9rem;
+  right: 0.9rem;
+  padding: 0.4rem 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: #fff;
+  background: rgb(0 0 0 / 0.6);
+  border: 1px solid rgb(255 255 255 / 0.35);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.zoom a:hover {
+  border-color: #fff;
+}
+
+/* As large as fits on screen. --ratio (width / height) is set by ProseEnhancements.astro. */
+.zoom img {
+  width: min(100%, calc((100vh - 2 * var(--pad)) * var(--ratio, 1.5)));
+  width: min(100%, calc((100dvh - 2 * var(--pad)) * var(--ratio, 1.5)));
+  height: auto;
+  aspect-ratio: var(--ratio, 1.5);
+  border-radius: var(--radius);
+  background: #fff;
+}

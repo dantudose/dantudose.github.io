@@ -1,0 +1,39 @@
+---
+import { tagSlug } from '../lib/content';
+
+interface Props {
+  tags: string[];
+}
+
+const { tags } = Astro.props;
+---
+
+{
+  tags.length > 0 && (
+    <ul class="tags mono">
+      {tags.map((tag) => (
+        <li>
+          <a href={`/tags/${tagSlug(tag)}/`}>#{tag}</a>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+<style>
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.15rem 0.9rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    text-transform: none;
+    letter-spacing: 0.02em;
+  }
+
+  a {
+    position: relative;
+    z-index: 1;
+  }
+</style>

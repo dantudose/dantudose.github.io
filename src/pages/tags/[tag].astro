@@ -1,0 +1,42 @@
+---
+import Base from '../../layouts/Base.astro';
+import EntryList from '../../components/EntryList.astro';
+import { getStream, tagSlug, type Item } from '../../lib/content';
+
+export async function getStaticPaths() {
+  const stream = await getStream();
+  const tags = new Map<string, string>();
+  for (const item of stream) for (const tag of item.tags) tags.set(tagSlug(tag), tag);
+
+  return [...tags].map(([slug, tag]) => ({
+    params: { tag: slug },
+    props: { tag, items: stream.filter((item) => item.tags.some((t) => tagSlug(t) === slug)) },
+  }));
+}
+
+interface Props {
+  tag: string;
+  items: Item[];
+}
+
+const { tag, items } = Astro.props;
+---
+
+<Base title={`#${tag}`} description={`Articles and notes tagged ${tag}.`}>
+  <div class="wrap">
+    <header class="page-head">
+      <p class="crumb mono"><a href="/tags/">&larr; All tags</a></p>
+      <h1><span class="hash">#</span>{tag}</h1>
+    </header>
+    <section class="section">
+      <h2 class="label">{items.length} {items.length === 1 ? 'entry' : 'entries'}</h2>
+      <EntryList items={items} />
+    </section>
+  </div>
+</Base>
+
+<style>
+  .hash {
+    color: var(--accent);
+  }
+</style>

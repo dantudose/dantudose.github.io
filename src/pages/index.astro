@@ -1,0 +1,88 @@
+---
+import Base from '../layouts/Base.astro';
+import Waveform from '../components/Waveform.astro';
+import EntryList from '../components/EntryList.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import { getProjects, getStream } from '../lib/content';
+
+const stream = await getStream();
+const latest = stream.slice(0, 8);
+const projects = await getProjects();
+const bench = projects.filter((project) => project.data.status === 'active').slice(0, 3);
+const shown = bench.length > 0 ? bench : projects.slice(0, 3);
+const entriesIn = (id: string) => stream.filter((item) => item.project === id).length;
+---
+
+<Base>
+  <section class="wrap hero">
+    <h1>Field notes on hardware, code, and <em>building things.</em></h1>
+    <Waveform />
+  </section>
+
+  <div class="wrap columns section">
+    <section aria-labelledby="latest">
+      <h2 class="label" id="latest">
+        Latest
+        <span class="more">
+          <a href="/articles/">All articles</a>
+          <a href="/notes/">All notes</a>
+        </span>
+      </h2>
+      <EntryList items={latest} empty="The first entry is on its way." />
+    </section>
+
+    <section aria-labelledby="bench">
+      <h2 class="label" id="bench">
+        On the bench
+        <a href="/projects/">All projects</a>
+      </h2>
+      <div class="bench">
+        {shown.map((project) => <ProjectCard project={project} entries={entriesIn(project.id)} />)}
+        {shown.length === 0 && <p class="empty">No projects yet.</p>}
+      </div>
+    </section>
+  </div>
+</Base>
+
+<style>
+  .hero {
+    padding-block: clamp(3rem, 9vw, 6.5rem) clamp(3rem, 7vw, 5rem);
+  }
+
+  h1 {
+    max-width: 16ch;
+    margin-bottom: clamp(2rem, 5vw, 3.5rem);
+    font-size: clamp(2.75rem, 8.4vw, 6rem);
+    font-weight: 400;
+    line-height: 0.98;
+    letter-spacing: -0.035em;
+  }
+
+  h1 em {
+    color: var(--accent);
+  }
+
+  .columns {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+    gap: clamp(2.5rem, 6vw, 5rem);
+    align-items: start;
+  }
+
+  .more {
+    display: flex;
+    gap: 1.25rem;
+  }
+
+  .bench {
+    display: grid;
+    gap: 2.5rem;
+    padding-top: 1.5rem;
+  }
+
+  @media (max-width: 60rem) {
+    .columns {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

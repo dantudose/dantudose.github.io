@@ -1,0 +1,37 @@
+---
+interface Props {
+  status: 'active' | 'paused' | 'shipped' | 'archived';
+}
+
+const { status } = Astro.props;
+---
+
+<span class="status mono" data-status={status}>{status}</span>
+
+<style>
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    white-space: nowrap;
+    color: var(--ink-2);
+  }
+
+  .status::before {
+    content: '';
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    border: 1px solid var(--muted);
+  }
+
+  .status[data-status='active']::before {
+    background: var(--accent-vivid);
+    border-color: var(--accent-vivid);
+  }
+
+  .status[data-status='shipped']::before {
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+</style>

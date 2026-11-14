@@ -1,0 +1,92 @@
+---
+// Browser-side extras for rendered Markdown: copy buttons on code blocks, click-to-zoom figures
+// and videos that play while they are on screen.
+// Include once on any page that renders a `.prose` block.
+---
+
+<dialog class="zoom" aria-label="Enlarged image">
+  <img alt="" />
+  <!-- For detailed images such as schematics: opens the file itself, where the browser can zoom and pan. -->
+  <a target="_blank" rel="noopener">Open full size &nearr;</a>
+</dialog>
+
+<script>
+  // Copy buttons
+  for (const pre of document.querySelectorAll<HTMLPreElement>('.prose pre')) {
+    const block = document.createElement('div');
+    block.className = 'code-block';
+    pre.replaceWith(block);
+    block.append(pre);
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'copy';
+    button.textContent = 'Copy';
+    button.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(pre.innerText);
+        button.textContent = 'Copied';
+        button.dataset.copied = '';
+        setTimeout(() => {
+          button.textContent = 'Copy';
+          delete button.dataset.copied;
+        }, 1600);
+      } catch {
+        button.textContent = 'Press Ctrl+C';
+      }
+    });
+    block.append(button);
+  }
+
+  // Click a figure to see it full size
+  const dialog = document.querySelector<HTMLDialogElement>('dialog.zoom');
+  const large = dialog?.querySelector('img');
+  const original = dialog?.querySelector('a');
+
+  /** The widest file listed in an image's srcset, or its plain src. */
+  const fullSize = (img: HTMLImageElement) => {
+    const candidates = img.srcset
+      .split(',')
+      .map((entry) => entry.trim().split(/\s+/))
+      .filter(([url]) => url)
+      .map(([url, width]) => ({ url, width: parseInt(width ?? '0', 10) || 0 }))
+      .sort((a, b) => b.width - a.width);
+    return candidates[0] ?? { url: img.src, width: img.naturalWidth };
+  };
+
+  if (dialog && large) {
+    for (const img of document.querySelectorAll<HTMLImageElement>('.prose figure img')) {
+      // A linked image follows its link instead.
+      if (img.closest('a')) continue;
+      img.addEventListener('click', () => {
+        const { url, width } = fullSize(img);
+        const vector = /\.svg($|\?)/i.test(url);
+        large.src = url;
+        large.alt = img.alt;
+        if (original) original.href = url;
+        // global.css sizes the image to fit the screen from its proportions. Vector images may grow
+        // to fill it; photos stop at their real pixel width so they never look blurry.
+        large.style.setProperty('--ratio', String(img.naturalWidth / img.naturalHeight || 1.5));
+        large.style.maxWidth = vector || !width ? '' : `${width}px`;
+        dialog.showModal();
+      });
+    }
+    dialog.addEventListener('click', () => dialog.close());
+  }
+
+  // Videos marked data-autoplay play (muted) while they are on screen and pause when scrolled away.
+  const videos = document.querySelectorAll<HTMLVideoElement>('.prose video[data-autoplay]');
+  if (videos.length > 0 && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const video = entry.target as HTMLVideoElement;
+          if (entry.isIntersecting) video.play().catch(() => {});
+          else video.pause();
+        }
+      },
+      { threshold: 0.5 },
+    );
+    for (const video of videos) observer.observe(video);
+  }
+</script>

@@ -1,0 +1,108 @@
+---
+import Tags from './Tags.astro';
+import { isoDate, type Item } from '../lib/content';
+
+interface Props {
+  items: Item[];
+  /** Hide the Article/Note marker on pages that only list one kind. */
+  showKind?: boolean;
+  empty?: string;
+}
+
+const { items, showKind = true, empty = 'Nothing here yet.' } = Astro.props;
+---
+
+{
+  items.length === 0 ? (
+    <p class="empty">{empty}</p>
+  ) : (
+    <ol class="entries">
+      {items.map((item) => (
+        <li class="entry">
+          <p class="meta mono">
+            <time datetime={isoDate(item.date)}>{isoDate(item.date)}</time>
+            {showKind && <span class="kind">{item.kind}</span>}
+          </p>
+          <div class="body">
+            <h3>
+              <a href={item.href}>{item.title}</a>
+            </h3>
+            {item.summary && <p class="summary">{item.summary}</p>}
+            <Tags tags={item.tags} />
+          </div>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+<style>
+  .entries {
+    container-type: inline-size;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .entry {
+    position: relative;
+    display: grid;
+    gap: 0.4rem 1.5rem;
+    padding-block: 1.5rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .meta {
+    display: flex;
+    gap: 0.9rem;
+  }
+
+  .kind {
+    color: var(--ink-2);
+  }
+
+  h3 {
+    font-size: 1.5rem;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+  }
+
+  /* The whole row is the link target. */
+  h3 a {
+    text-decoration: none;
+  }
+
+  h3 a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+
+  .entry:hover h3 a {
+    color: var(--accent);
+  }
+
+  .summary {
+    margin-top: 0.4rem;
+    max-width: 36rem;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    color: var(--ink-2);
+  }
+
+  .body :global(.tags) {
+    margin-top: 0.7rem;
+  }
+
+  @container (min-width: 34rem) {
+    .entry {
+      grid-template-columns: 7rem 1fr;
+    }
+
+    .meta {
+      flex-direction: column;
+      gap: 0.15rem;
+      padding-top: 0.45rem;
+    }
+  }
+</style>

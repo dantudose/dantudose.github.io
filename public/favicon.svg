@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#18181b"/>
+  <!-- Noise on the left resolving into a sine wave on the right. -->
+  <path transform="matrix(-1 0 0 1 32 0)" d="M4 16c1.5-7 3-7 4.5 0s3 7 4.5 0 3-7 4.5 0l1.6 5 1.5-9.5 1.6 7 1.4-4.5 1.5 6 1.4-5.5L28 17" fill="none" stroke="#ff6b2c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,127 @@
+---
+// The site's mark: noise that resolves into a clean sine wave.
+// Drawn once at build time from a seeded random source, so it never changes between builds.
+
+interface Props {
+  /** `fade` runs from noise to signal; `noise` is static all the way across. */
+  variant?: 'fade' | 'noise';
+  /** Show the "Noise → Signal" axis labels under the trace. */
+  labels?: boolean;
+}
+
+const { variant = 'fade', labels = true } = Astro.props;
+
+const WIDTH = 1200;
+const HEIGHT = 120;
+const MID = HEIGHT / 2;
+const AMPLITUDE = 34;
+const CYCLES = 9;
+const STEP = 3;
+
+function seededRandom(seed: number) {
+  return () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const smoothstep = (from: number, to: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - from) / (to - from)));
+  return t * t * (3 - 2 * t);
+};
+
+const random = seededRandom(11);
+let previous = 0;
+let trace = '';
+
+for (let x = 0; x <= WIDTH; x += STEP) {
+  const t = x / WIDTH;
+  // 1 at the left edge (all noise), easing down to 0 (pure signal) over the right-hand quarter.
+  const noise = variant === 'noise' ? 1 : smoothstep(0.26, 0.9, 1 - t) ** 1.7;
+  const sample = random() * 2 - 1;
+  const jitter = sample * 0.78 + previous * 0.22;
+  previous = sample;
+
+  const signal = Math.sin(t * Math.PI * 2 * CYCLES);
+  const y = MID - ((1 - 0.65 * noise) * AMPLITUDE * signal + noise * jitter * AMPLITUDE * 1.25);
+  trace += `${x === 0 ? 'M' : 'L'}${x} ${y.toFixed(1)}`;
+}
+
+// Scale ticks along the centre line, like an oscilloscope graticule.
+let ticks = '';
+for (let x = 0; x <= WIDTH; x += 50) {
+  const size = x % 100 === 0 ? 5 : 2.5;
+  ticks += `M${x} ${MID - size}V${MID + size}`;
+}
+---
+
+<div class="waveform" aria-hidden="true">
+  <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} preserveAspectRatio="none">
+    <path class="grid" d={`M0 ${MID}H${WIDTH}${ticks}`}></path>
+    <path class="trace" d={trace}></path>
+  </svg>
+  {
+    labels && (
+      <div class="axis mono">
+        <span>Noise</span>
+        <span class="arrow">&rarr;</span>
+        <span>Signal</span>
+      </div>
+    )
+  }
+</div>
+
+<style>
+  svg {
+    width: 100%;
+    height: clamp(5rem, 13vw, 7.5rem);
+    overflow: visible;
+  }
+
+  path {
+    fill: none;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .grid {
+    stroke: var(--rule);
+    stroke-width: 1;
+  }
+
+  .trace {
+    stroke: var(--accent-vivid);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+
+  .axis {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+  }
+
+  .arrow {
+    color: var(--accent);
+  }
+
+  /* Sweep the trace in from the left, like a scope drawing its first pass. */
+  @media (prefers-reduced-motion: no-preference) {
+    .trace {
+      animation: sweep 1.5s cubic-bezier(0.3, 0, 0.2, 1) both;
+    }
+
+    @keyframes sweep {
+      from {
+        clip-path: inset(-10% 100% -10% 0);
+      }
+      to {
+        clip-path: inset(-10% 0 -10% 0);
+      }
+    }
+  }
+</style>
