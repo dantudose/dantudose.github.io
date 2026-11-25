@@ -1,0 +1,1286 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Laborator de control fuzzy</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: bancă de laborator – bară de taburi, apoi zone de lucru în grilă; instrumente (canvas) pe panouri albe, comenzi compacte. */
+:root {
+  --bg: #F3F5F9; --panel: #FFFFFF; --soft: #EDF1F6; --ink: #1C2532; --muted: #5A6677; --line: #D8DFE8;
+  --accent: #2F5E9E; --pid: #C9622A; --fz: #4B44C2; --ok: #2E8656; --warn: #B7800F; --bad: #BF3F38;
+  --neg: #4A7FC1; --pos: #CF5F78; --zero: #9AA5B4;
+  --t0: #4A7FC1; --t1: #4DA37A; --t2: #C99A1E; --t3: #8E6FC9; --t4: #DB7D45; --t5: #D0657C;
+  --f-sans: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #10141A; --panel: #171D25; --soft: #1E2530; --ink: #E4E9F0; --muted: #97A2B2; --line: #2A3340;
+  --accent: #82A9E3; --pid: #F09257; --fz: #A49CF7; --ok: #5DBF89; --warn: #E2B04A; --bad: #EE7B72;
+  --neg: #7FA7E0; --pos: #EC8FA3; --zero: #6B7686;
+  --t0: #7FA7E0; --t1: #6CC498; --t2: #E2B84A; --t3: #B49AF0; --t4: #F0A070; --t5: #EC8FA3; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #10141A; --panel: #171D25; --soft: #1E2530; --ink: #E4E9F0; --muted: #97A2B2; --line: #2A3340;
+  --accent: #82A9E3; --pid: #F09257; --fz: #A49CF7; --ok: #5DBF89; --warn: #E2B04A; --bad: #EE7B72;
+  --neg: #7FA7E0; --pos: #EC8FA3; --zero: #6B7686;
+  --t0: #7FA7E0; --t1: #6CC498; --t2: #E2B84A; --t3: #B49AF0; --t4: #F0A070; --t5: #EC8FA3; color-scheme: dark }
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-sans); font-size: 15px; line-height: 1.45 }
+.wrap { max-width: 1320px; margin: 0 auto; padding-block: 18px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin-bottom: 14px }
+h1 { font-size: 26px; line-height: 1.15; margin: 0; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance }
+.sub { color: var(--muted); font-size: 14px; margin-top: 4px }
+nav.tabs { display: flex; gap: 4px; background: var(--soft); padding: 4px; border-radius: 999px; flex-wrap: wrap }
+nav.tabs a { text-decoration: none; color: var(--muted); padding: 7px 14px; border-radius: 999px; font-weight: 500; font-size: 14px; white-space: nowrap }
+nav.tabs a[aria-selected="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08) }
+nav.tabs a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible, .cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+h2 { font-size: 17px; margin: 0; font-weight: 600 }
+h3 { font-size: 13px; margin: 0; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted) }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; min-width: 0 }
+.grid { display: grid; gap: 14px }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.stack { display: flex; flex-direction: column; gap: 10px; min-width: 0 }
+.muted { color: var(--muted) }
+.mono, .num { font-family: var(--f-mono); font-variant-numeric: tabular-nums }
+.small { font-size: 13px }
+button, select { font: inherit; font-size: 14px; color: var(--ink); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 6px 11px; cursor: pointer }
+button:hover { border-color: var(--accent) }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); font-weight: 600 }
+button.chip { border-radius: 999px; padding: 5px 12px }
+button.chip[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink) }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden }
+.seg button { border: 0; border-radius: 0; padding: 5px 10px; background: var(--panel) }
+.seg button + button { border-left: 1px solid var(--line) }
+.seg button[aria-pressed="true"] { background: var(--soft); font-weight: 600; color: var(--accent) }
+label.ctl { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 13px; color: var(--muted) }
+label.ctl input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent) }
+label.ctl output { font-family: var(--f-mono); color: var(--ink); font-size: 13px }
+canvas { display: block; width: 100%; max-width: 100% }
+svg { display: block; width: 100%; height: auto; max-width: 100%; overflow: visible }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted) }
+.sw { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px }
+.note { font-size: 13.5px; color: var(--muted); max-width: 75ch }
+details > summary { cursor: pointer; font-weight: 600; font-size: 14px; list-style: none }
+details > summary::before { content: "▸ "; color: var(--muted) }
+details[open] > summary::before { content: "▾ " }
+
+/* ---------- pendul */
+.scen { display: flex; flex-wrap: wrap; gap: 6px }
+.story { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 16px; align-items: start }
+.story p { margin: 4px 0 0; max-width: 80ch }
+.arenas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px }
+.arena { padding: 10px 12px 12px }
+.arena header { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap }
+.arena .name { font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 8px }
+.arena .name i { width: 10px; height: 10px; border-radius: 50%; display: inline-block }
+.arena canvas { aspect-ratio: 16 / 8.2; border-radius: 8px; background: var(--soft); cursor: crosshair }
+.pill { font-size: 12.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap }
+.pill.ok { color: var(--ok) } .pill.warn { color: var(--warn) } .pill.bad { color: var(--bad) } .pill.neutral { color: var(--muted) }
+.readout { display: flex; gap: 14px; flex-wrap: wrap; font-family: var(--f-mono); font-size: 12.5px; color: var(--muted); margin-top: 6px }
+.readout b { color: var(--ink); font-weight: 500 }
+.charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px }
+.charts canvas { height: 170px }
+table.metrics { width: 100%; border-collapse: collapse; font-size: 14px }
+table.metrics th, table.metrics td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right }
+table.metrics th:first-child, table.metrics td:first-child { text-align: left }
+table.metrics td.win { font-weight: 700 }
+table.metrics td.win::after { content: " ●"; font-size: 9px; vertical-align: middle }
+table.metrics td.pid.win { color: var(--pid) } table.metrics td.fz.win { color: var(--fz) }
+.inside { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 14px }
+.bars { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 10px; align-items: center; font-size: 13px }
+.bar { height: 12px; background: var(--soft); border-radius: 3px; position: relative; overflow: hidden }
+.bar span { position: absolute; top: 0; bottom: 0; background: var(--pid); opacity: .75 }
+.bar::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--muted); opacity: .5 }
+.fzin { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: start }
+.rulegrid { display: grid; gap: 2px; font-family: var(--f-mono); font-size: 10.5px }
+.rulegrid div { aspect-ratio: 1; display: grid; place-items: center; border-radius: 3px; min-width: 26px; position: relative }
+.rulegrid .hdr { color: var(--muted); background: none; font-size: 10px }
+.settings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px }
+
+/* ---------- inferență */
+.inf { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px }
+.inf .full { grid-column: 1 / -1 }
+.matrix { display: grid; grid-template-columns: auto repeat(5, minmax(0, 1fr)); gap: 3px; font-size: 12.5px }
+.matrix .h { color: var(--muted); font-family: var(--f-mono); font-size: 11.5px; display: grid; place-items: center; text-align: center; padding: 2px }
+.matrix .rh { justify-items: end; padding-right: 6px }
+.cell { border: 1px solid var(--line); border-radius: 6px; min-height: 52px; padding: 4px; display: flex; flex-direction: column;
+  justify-content: space-between; cursor: pointer; background: var(--panel); position: relative; overflow: hidden; font-family: var(--f-mono); font-size: 11.5px; text-align: left; color: var(--ink) }
+.cell .fill { position: absolute; left: 0; right: 0; bottom: 0; opacity: .28; pointer-events: none }
+.cell .t { position: relative; font-weight: 600 }
+.cell .w { position: relative; color: var(--muted); font-size: 11px }
+.cell.empty .t { color: var(--muted); font-weight: 400 }
+.cell.on { border-color: var(--ink) }
+.result { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap }
+.big { font-family: var(--f-mono); font-size: 34px; font-weight: 600; letter-spacing: -0.02em }
+.firing { font-family: var(--f-mono); font-size: 13px; display: flex; flex-direction: column; gap: 4px }
+.firing div { padding: 4px 8px; border-radius: 6px; background: var(--soft) }
+.chips { display: flex; flex-wrap: wrap; gap: 6px }
+.chips span { font-family: var(--f-mono); font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted) }
+.chips span.on { color: var(--ink); border-color: currentColor; font-weight: 600 }
+.heat canvas { aspect-ratio: 3.4; cursor: crosshair; border-radius: 6px }
+
+/* ---------- suprafață */
+.surf { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 14px }
+.surf canvas.s3d { aspect-ratio: 1.25; cursor: grab; border-radius: 8px; background: var(--soft); touch-action: none }
+.surf canvas.slice { height: 220px }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13.5px }
+.kv dt { color: var(--muted) } .kv dd { margin: 0; font-family: var(--f-mono) }
+
+@media (max-width: 980px) {
+  .inside, .inf, .surf, .settings { grid-template-columns: minmax(0, 1fr) }
+}
+@media (max-width: 720px) {
+  .arenas, .charts { grid-template-columns: minmax(0, 1fr) }
+  .story { grid-template-columns: minmax(0, 1fr) }
+  .fzin { grid-template-columns: minmax(0, 1fr) }
+  h1 { font-size: 22px }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Laborator de control fuzzy</h1>
+      <div class="sub">Sisteme Încorporate · Cursul 8 · demo interactiv</div>
+    </div>
+    <nav class="tabs" aria-label="Secțiuni">
+      <a href="#pendul" data-tab="pendul">Pendul: PID vs fuzzy</a>
+      <a href="#inferenta" data-tab="inferenta">Inferența pas cu pas</a>
+      <a href="#suprafata" data-tab="suprafata">Suprafața de control</a>
+    </nav>
+  </header>
+
+  <!-- ===================================================== PENDUL -->
+  <section id="v-pendul" class="view grid">
+    <div class="panel stack">
+      <div class="row" style="justify-content: space-between">
+        <h3>Scenariu</h3>
+        <div class="row">
+          <button id="btnRun" class="primary">⏸ Pauză</button>
+          <button id="btnReset">↺ Reia</button>
+          <button id="btnPushL" title="Lovitură de 15 N spre stânga, aplicată ambelor pendule">⟵ Împinge</button>
+          <button id="btnPushR" title="Lovitură de 15 N spre dreapta, aplicată ambelor pendule">Împinge ⟶</button>
+          <div class="seg" role="group" aria-label="Viteza simulării" id="speedSeg">
+            <button data-v="0.25">¼×</button><button data-v="0.5">½×</button><button data-v="1" aria-pressed="true">1×</button>
+          </div>
+        </div>
+      </div>
+      <div class="scen" id="scenBtns"></div>
+      <div class="story">
+        <div>
+          <h2 id="scenTitle"></h2>
+          <p id="scenText" class="note"></p>
+        </div>
+        <div class="small muted mono" id="simClock">t = 0.0 s</div>
+      </div>
+    </div>
+
+    <div class="arenas">
+      <div class="panel arena" id="arenaPid">
+        <header><div class="name"><i style="background: var(--pid)"></i>PID</div><span class="pill neutral" id="pillPid">–</span></header>
+        <canvas id="cvPid" aria-label="Pendulul controlat de PID"></canvas>
+        <div class="readout" id="roPid"></div>
+      </div>
+      <div class="panel arena" id="arenaFz">
+        <header><div class="name"><i style="background: var(--fz)"></i>Fuzzy</div><span class="pill neutral" id="pillFz">–</span></header>
+        <canvas id="cvFz" aria-label="Pendulul controlat fuzzy"></canvas>
+        <div class="readout" id="roFz"></div>
+      </div>
+    </div>
+    <p class="note small" style="margin: -4px 0 0">Click pe oricare pendul îi aplică ambelor aceeași lovitură, în direcția click-ului. Tastele ← și → fac același lucru.</p>
+
+    <div class="charts">
+      <div class="panel stack">
+        <div class="row" style="justify-content: space-between"><h3>Unghiul θ (°)</h3>
+          <div class="legend"><span><i class="sw" style="background: var(--pid)"></i>PID</span><span><i class="sw" style="background: var(--fz)"></i>Fuzzy</span></div></div>
+        <canvas id="chTheta"></canvas>
+      </div>
+      <div class="panel stack">
+        <div class="row" style="justify-content: space-between"><h3>Forța de comandă F (N)</h3>
+          <div class="legend"><span><i class="sw" style="background: var(--pid)"></i>PID</span><span><i class="sw" style="background: var(--fz)"></i>Fuzzy</span></div></div>
+        <canvas id="chForce"></canvas>
+      </div>
+    </div>
+
+    <div class="inside">
+      <div class="panel stack">
+        <h3>Scor de la începutul scenariului</h3>
+        <table class="metrics" id="metrics"></table>
+        <p class="note small" style="margin: 0">● = mai bun. „Activitate actuator” = suma variațiilor comenzii; un motor real se încălzește și se uzează proporțional cu ea.</p>
+      </div>
+      <div class="panel stack">
+        <h3>În interiorul controllerelor</h3>
+        <div class="stack">
+          <div class="small" style="color: var(--pid); font-weight: 600">PID: contribuțiile termenilor (N)</div>
+          <div class="bars" id="pidBars"></div>
+        </div>
+        <div class="fzin">
+          <div class="stack">
+            <div class="small" style="color: var(--fz); font-weight: 600">Reguli de echilibrare (7×7)</div>
+            <div class="rulegrid" id="balGrid"></div>
+            <div class="small muted">rânduri: eroare e · coloane: viteză ė</div>
+          </div>
+          <div class="stack">
+            <div class="small" style="color: var(--fz); font-weight: 600">Supervizor fuzzy</div>
+            <div class="bars" id="supBars"></div>
+            <div class="small" style="color: var(--fz); font-weight: 600; margin-top: 4px">Reguli de energie (swing-up)</div>
+            <div class="rulegrid" id="pumpGrid" style="max-width: 300px"></div>
+            <div class="small muted" id="pumpNote">rânduri: energie · coloane: ω·cosθ</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <details class="panel" id="setDetails" open>
+      <summary>Parametri: instalație și controllere</summary>
+      <div class="settings" style="margin-top: 12px">
+        <div class="stack">
+          <h3>Instalație (comună)</h3>
+          <label class="ctl"><span>Masa pendulului m</span> <output id="o_m"></output><input type="range" id="s_m" min="0.05" max="0.5" step="0.01"></label>
+          <label class="ctl"><span>Lungimea tijei 2l</span> <output id="o_L"></output><input type="range" id="s_L" min="0.4" max="1.6" step="0.05"></label>
+          <label class="ctl"><span>Forța maximă a motorului</span> <output id="o_Fm"></output><input type="range" id="s_Fm" min="5" max="20" step="0.5"></label>
+          <label class="ctl"><span>Zgomot senzor unghi σ</span> <output id="o_nz"></output><input type="range" id="s_nz" min="0" max="1.5" step="0.05"></label>
+          <label class="ctl"><span>Perioada de eșantionare Ts</span> <output id="o_Ts"></output><input type="range" id="s_Ts" min="5" max="40" step="1"></label>
+          <p class="note small" style="margin: 0">Ambele controllere primesc aceleași măsurători, cu același zgomot, și au aceeași buclă externă care readuce căruciorul la centru. Diferă doar regulatorul de unghi.</p>
+        </div>
+        <div class="stack">
+          <h3 style="color: var(--pid)">PID</h3>
+          <label class="ctl"><span>Kp</span> <output id="o_kp"></output><input type="range" id="s_kp" min="0" max="150" step="1"></label>
+          <label class="ctl"><span>Ki</span> <output id="o_ki"></output><input type="range" id="s_ki" min="0" max="30" step="0.5"></label>
+          <label class="ctl"><span>Kd</span> <output id="o_kd"></output><input type="range" id="s_kd" min="0" max="40" step="0.5"></label>
+          <div class="row"><button class="chip" id="pidStd">Moderat 40 / 4 / 8</button><button class="chip" id="pidAgr">Agresiv 100 / 10 / 20</button></div>
+        </div>
+        <div class="stack">
+          <h3 style="color: var(--fz)">Fuzzy</h3>
+          <label class="ctl"><span>Scalare eroare e<sub>s</sub></span> <output id="o_es"></output><input type="range" id="s_es" min="0.05" max="0.6" step="0.01"></label>
+          <label class="ctl"><span>Scalare viteză ė<sub>s</sub></span> <output id="o_ds"></output><input type="range" id="s_ds" min="0.3" max="4" step="0.05"></label>
+          <label class="ctl"><span>Neliniaritatea ieșirilor p</span> <output id="o_p"></output><input type="range" id="s_p" min="1" max="2.5" step="0.05"></label>
+          <label class="row small" style="gap: 8px"><input type="checkbox" id="s_sup"> Supervizor și reguli de swing-up</label>
+          <button class="chip" id="fzStd" style="justify-self: start; width: fit-content">Valori implicite</button>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ===================================================== INFERENȚĂ -->
+  <section id="v-inferenta" class="view grid" hidden>
+    <div class="panel stack">
+      <div class="row" style="justify-content: space-between">
+        <div><h2>Macaraua din curs: de la măsurători la putere</h2>
+        <p class="note" style="margin: 4px 0 0">Mutați intrările, trageți de vârfurile funcțiilor de apartenență, click pe celulele din tabelul de reguli. Totul se recalculează imediat.</p></div>
+        <div class="row">
+          <button id="infCourse" class="chip">Exemplul din curs: 20°, 12 m</button>
+          <button id="infResetMf" class="chip">Resetează funcțiile</button>
+        </div>
+      </div>
+    </div>
+    <div class="inf">
+      <div class="panel stack">
+        <div class="row" style="justify-content: space-between"><h3>1 · Fuzzificare: unghi</h3><span class="mono" id="angVal"></span></div>
+        <input type="range" id="angIn" min="-90" max="90" step="0.5" aria-label="Unghi">
+        <svg id="mfAng" viewBox="0 0 520 186" role="img" aria-label="Funcțiile de apartenență pentru unghi"></svg>
+        <div class="chips" id="chAng"></div>
+      </div>
+      <div class="panel stack">
+        <div class="row" style="justify-content: space-between"><h3>1 · Fuzzificare: distanță</h3><span class="mono" id="distVal"></span></div>
+        <input type="range" id="distIn" min="-10" max="35" step="0.1" aria-label="Distanță">
+        <svg id="mfDist" viewBox="0 0 520 186" role="img" aria-label="Funcțiile de apartenență pentru distanță"></svg>
+        <div class="chips" id="chDist"></div>
+      </div>
+      <div class="panel stack">
+        <div class="row" style="justify-content: space-between"><h3>2 · Reguli și agregare</h3>
+          <div class="row"><button class="chip" id="rulesCourse">Cele 3 reguli din curs</button><button class="chip" id="rulesFull">Bază completă (25)</button><button class="chip" id="rulesNone">Golește</button></div></div>
+        <div class="matrix" id="ruleMatrix"></div>
+        <div class="small muted">Rânduri: Distanță · coloane: Unghi · click pe o celulă schimbă concluzia regulii (THEN Putere = …). Bara colorată arată gradul de activare.</div>
+        <div class="row small"><span class="muted">AND:</span>
+          <div class="seg" id="segAnd"><button data-v="min" aria-pressed="true">min</button><button data-v="prod">produs</button></div>
+          <span class="muted" style="margin-left: 8px">Implicație:</span>
+          <div class="seg" id="segImp"><button data-v="min" aria-pressed="true">tăiere (min)</button><button data-v="prod">scalare (produs)</button></div>
+        </div>
+        <div class="firing" id="firing"></div>
+      </div>
+      <div class="panel stack">
+        <div class="row" style="justify-content: space-between"><h3>3 · Compoziție și defuzzificare</h3>
+          <div class="seg" id="segDef"><button data-v="com" aria-pressed="true">centrul maximelor</button><button data-v="cog">centrul de greutate</button><button data-v="mom">media maximelor</button></div></div>
+        <svg id="mfOut" viewBox="0 0 520 200" role="img" aria-label="Mulțimea fuzzy de ieșire pentru putere"></svg>
+        <div class="result"><span class="big" id="outVal">–</span><span class="muted" id="outFormula"></span></div>
+        <div class="legend"><span><i class="sw" style="background: var(--ink)"></i>rezultatul metodei alese</span><span class="muted" id="outOthers"></span></div>
+      </div>
+      <div class="panel stack full heat">
+        <div class="row" style="justify-content: space-between"><h3>Suprafața de control a macaralei: Putere(distanță, unghi)</h3><span class="small muted">click pe hartă mută intrările</span></div>
+        <canvas id="heatCrane"></canvas>
+        <div class="row small muted" style="justify-content: space-between"><span id="heatLegend"></span><span>Zonele gri: nicio regulă nu se activează, ieșirea rămâne nedefinită.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== SUPRAFAȚĂ -->
+  <section id="v-suprafata" class="view grid" hidden>
+    <div class="panel stack">
+      <h2>Ce calculează, de fapt, un controller fuzzy?</h2>
+      <p class="note" style="margin: 0">Controllerul de echilibrare al pendulului transformă perechea (eroare, viteză) într-o forță. Desenată, această funcție este o <b>suprafață</b>. Controllerul PD dă un plan înclinat, tăiat de limita motorului. Regulile fuzzy dau o suprafață curbată: câștig mic lângă zero, care nu amplifică zgomotul, și câștig mare la erori mari.</p>
+    </div>
+    <div class="surf">
+      <div class="panel stack">
+        <div class="row" style="justify-content: space-between">
+          <div class="seg" id="segSurf"><button data-v="fz" aria-pressed="true">Fuzzy</button><button data-v="pd">PD liniar</button><button data-v="both">Ambele</button></div>
+          <span class="small muted">trageți pentru a roti</span>
+        </div>
+        <canvas class="s3d" id="cv3d"></canvas>
+      </div>
+      <div class="stack">
+        <div class="panel stack">
+          <h3>Secțiune la ė = 0: F în funcție de eroare</h3>
+          <canvas class="slice" id="cvSlice"></canvas>
+          <div class="legend"><span><i class="sw" style="background: var(--fz)"></i>fuzzy</span><span><i class="sw" style="background: var(--pid)"></i>PD (Kp, Kd din tabul Pendul)</span></div>
+        </div>
+        <div class="panel stack">
+          <h3>Parametri</h3>
+          <div class="row small"><span class="muted">Termeni pe intrare:</span><div class="seg" id="segN"><button data-v="3">3</button><button data-v="5">5</button><button data-v="7" aria-pressed="true">7</button></div></div>
+          <label class="ctl"><span>Neliniaritatea ieșirilor p</span> <output id="o_p2"></output><input type="range" id="s_p2" min="1" max="2.5" step="0.05"></label>
+          <dl class="kv" id="surfKv"></dl>
+          <p class="note small" style="margin: 0">p = 1 dă o suprafață aproape plană, echivalentă cu un PD saturat. Cu cât p e mai mare, cu atât câștigul din jurul lui zero scade față de cel de la erori mari. Pe microcontroller, această suprafață se poate precalcula ca tabel.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+<script>// core.js – logica demo-ului (fără DOM): inferență fuzzy, pendul inversat, controllere.
+// Este inclus ca atare în pagina HTML și poate fi testat cu node (vezi test_core.js).
+'use strict';
+const G = 9.81;
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+function wrap(a) { a = (a + Math.PI) % (2 * Math.PI); if (a < 0) a += 2 * Math.PI; return a - Math.PI; }
+
+// ---------------------------------------------------------------- funcții de apartenență
+// funcție liniară pe porțiuni, dată prin puncte [x, μ]; constantă în afara capetelor
+function mfVal(pts, x) {
+  const n = pts.length;
+  if (x <= pts[0][0]) return pts[0][1];
+  if (x >= pts[n - 1][0]) return pts[n - 1][1];
+  for (let i = 1; i < n; i++) {
+    if (x <= pts[i][0]) {
+      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+      return x1 === x0 ? Math.max(y0, y1) : y0 + (y1 - y0) * (x - x0) / (x1 - x0);
+    }
+  }
+  return 0;
+}
+// mijlocul platoului de maxim (folosit de metoda centrului maximelor)
+function termPeak(pts) {
+  let mx = -1; for (const p of pts) mx = Math.max(mx, p[1]);
+  const xs = pts.filter(p => p[1] === mx).map(p => p[0]);
+  return (Math.min(...xs) + Math.max(...xs)) / 2;
+}
+
+// ---------------------------------------------------------------- macaraua din curs
+const CRANE = {
+  angle: { name: 'Unghi', unit: '°', range: [-90, 90], terms: [
+    { name: 'neg_mare', pts: [[-90, 1], [-50, 1], [-25, 0]] },
+    { name: 'neg_mic', pts: [[-50, 0], [-25, 1], [0, 0]] },
+    { name: 'zero', pts: [[-25, 0], [0, 1], [25, 0]] },
+    { name: 'poz_mic', pts: [[0, 0], [25, 1], [50, 0]] },
+    { name: 'poz_mare', pts: [[25, 0], [50, 1], [90, 1]] }] },
+  dist: { name: 'Distanță', unit: 'm', range: [-10, 35], terms: [
+    { name: 'neg_aproape', pts: [[-10, 1], [-5, 1], [0, 0]] },
+    { name: 'zero', pts: [[-5, 0], [0, 1], [5, 0]] },
+    { name: 'aproape', pts: [[0, 0], [5, 1], [10, 0]] },
+    { name: 'mediu', pts: [[5, 0], [10, 1], [30, 0]] },
+    { name: 'departe', pts: [[10, 0], [30, 1], [35, 1]] }] },
+  power: { name: 'Putere', unit: 'kW', range: [-30, 30], terms: [
+    { name: 'neg_mare', pts: [[-30, 1], [-16, 1], [-8, 0]] },
+    { name: 'neg_mediu', pts: [[-16, 0], [-8, 1], [0, 0]] },
+    { name: 'zero', pts: [[-8, 0], [0, 1], [8, 0]] },
+    { name: 'poz_mediu', pts: [[0, 0], [8, 1], [16, 0]] },
+    { name: 'poz_mare', pts: [[8, 0], [16, 1], [30, 1]] }] },
+};
+// reguli: cheie "indice distanță,indice unghi" -> indice putere
+const CRANE_RULES_COURSE = { '3,3': 3, '3,2': 2, '4,2': 3 };   // regulile #1, #2, #3 din curs
+// bază extinsă, ilustrativă (rânduri: neg_aproape, zero, aproape, mediu, departe; coloane: neg_mare … poz_mare)
+const CRANE_RULES_FULL = (() => {
+  const T = [
+    [0, 0, 1, 2, 3],   // neg_aproape: a trecut de țintă -> înapoi
+    [1, 1, 2, 3, 3],   // zero
+    [1, 2, 2, 3, 3],   // aproape
+    [3, 3, 2, 3, 4],   // mediu   (conține regulile #1, #2)
+    [3, 4, 3, 3, 4],   // departe (conține regula #3)
+  ];
+  const r = {}; T.forEach((row, d) => row.forEach((p, a) => { r[d + ',' + a] = p; })); return r;
+})();
+
+function craneInfer(model, rules, angle, dist, opts) {
+  const muA = model.angle.terms.map(t => mfVal(t.pts, angle));
+  const muD = model.dist.terms.map(t => mfVal(t.pts, dist));
+  const P = model.power.terms, act = new Array(P.length).fill(0), fired = [];
+  for (const key in rules) {
+    const p = rules[key]; if (p == null) continue;
+    const [di, ai] = key.split(',').map(Number);
+    const w = opts.and === 'prod' ? muD[di] * muA[ai] : Math.min(muD[di], muA[ai]);
+    fired.push({ di, ai, p, w });
+    if (w > act[p]) act[p] = w;
+  }
+  const res = { muA, muD, fired, act };
+  let num = 0, den = 0;
+  act.forEach((a, i) => { if (a > 0) { num += a * termPeak(P[i].pts); den += a; } });
+  res.com = den > 0 ? num / den : null;
+  const [lo, hi] = model.power.range, N = opts.samples || 241;
+  const xs = new Float64Array(N), ys = new Float64Array(N);
+  let cn = 0, cd = 0, ymax = 0;
+  for (let k = 0; k < N; k++) {
+    const x = lo + (hi - lo) * k / (N - 1); let y = 0;
+    for (let i = 0; i < P.length; i++) {
+      const a = act[i]; if (a <= 0) continue;
+      const m = mfVal(P[i].pts, x), v = opts.imp === 'prod' ? a * m : Math.min(a, m);
+      if (v > y) y = v;
+    }
+    xs[k] = x; ys[k] = y; cn += x * y; cd += y; if (y > ymax) ymax = y;
+  }
+  res.xs = xs; res.ys = ys; res.cog = cd > 0 ? cn / cd : null;
+  if (ymax > 0) { let s = 0, c = 0; for (let k = 0; k < N; k++) if (ys[k] >= ymax - 1e-9) { s += xs[k]; c++; } res.mom = s / c; }
+  else res.mom = null;
+  res.out = { com: res.com, cog: res.cog, mom: res.mom }[opts.defuzz];
+  return res;
+}
+
+// ---------------------------------------------------------------- pendul inversat pe cărucior
+// stare s = [x, v, θ, ω]; θ = 0 vertical în sus, θ > 0 înclinat spre dreapta; F > 0 împinge spre dreapta
+function derivs(s, F, P) {
+  const [, v, th, w] = s, tot = P.M + P.m, st = Math.sin(th), ct = Math.cos(th);
+  const tmp = (-F - P.m * P.l * w * w * st - P.b * v) / tot;
+  const ath = (G * st + ct * tmp) / (P.l * (4 / 3 - P.m * ct * ct / tot));
+  const ax = (F + P.m * P.l * (w * w * st - ath * ct) - P.b * v) / tot;
+  return [v, ax, w, ath];
+}
+function rk4(s, F, P, dt) {
+  const add = (a, b, k) => a.map((x, i) => x + k * b[i]);
+  const k1 = derivs(s, F, P), k2 = derivs(add(s, k1, dt / 2), F, P);
+  const k3 = derivs(add(s, k2, dt / 2), F, P), k4 = derivs(add(s, k3, dt), F, P);
+  return s.map((x, i) => x + dt / 6 * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]));
+}
+function mulberry32(a) {
+  return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+function gaussFrom(rnd) { return () => { let u = 0; while (!u) u = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rnd()); }; }
+
+// ---- controller PID (pe unghi), cu anti-windup prin oprirea integrării la saturație
+function makePID(g) {
+  const c = { kind: 'pid', g, I: 0, last: { p: 0, i: 0, d: 0 } };
+  c.reset = () => { c.I = 0; };
+  c.step = (meas, ref, Ts, Fm) => {
+    const e = wrap(meas.th) - ref, de = meas.w;
+    const p = g.kp * e, i = g.ki * c.I, d = g.kd * de, u = p + i + d;
+    if (Math.abs(u) < Fm || u * e < 0) c.I += e * Ts;
+    c.last = { p, i, d, e, de };
+    return clamp(u, -Fm, Fm);
+  };
+  return c;
+}
+
+// ---- controller fuzzy de echilibrare: n termeni pe e și ė, reguli „diagonale”, ieșiri singleton neliniare
+function makeBalanceRB(n, p) {
+  const h = (n - 1) / 2, C = [], O = [];
+  for (let i = 0; i < n; i++) C.push(-1 + 2 * i / (n - 1));
+  for (let k = -h; k <= h; k++) O.push(Math.sign(k) * Math.pow(Math.abs(k) / h, p));
+  const rule = (i, j) => clamp(i - h + (j - h), -h, h) + h;   // indicele termenului de ieșire
+  return { n, h, C, O, rule, p };
+}
+function mfN(z, B) { z = clamp(z, -1, 1); const st = 2 / (B.n - 1); return B.C.map(c => Math.max(0, 1 - Math.abs(z - c) / st)); }
+function balanceFz(E, D, B, act) {
+  const me = mfN(E, B), md = mfN(D, B); let num = 0, den = 0;
+  if (act) act.fill(0);
+  for (let i = 0; i < B.n; i++) {
+    if (!me[i]) continue;
+    for (let j = 0; j < B.n; j++) {
+      if (!md[j]) continue;
+      const w = Math.min(me[i], md[j]);
+      num += w * B.O[B.rule(i, j)]; den += w;
+      if (act) act[i * B.n + j] = w;
+    }
+  }
+  return den > 0 ? num / den : 0;
+}
+// ---- reguli fuzzy de gestionare a energiei (swing-up):
+// energie {exces, potrivită, deficit mare} × ω·cosθ {neg, zero, poz}
+const PUMP_OUT = [[-1, 0, 1], [0.25, 0, -0.25], [1, 0, -1]];
+const ENERGY_TERMS = ['exces', 'potrivită', 'deficit'];
+function energyMu(E, P, eoff = 0) {
+  const z = clamp(-E / (2 * P.m * G * P.l) + eoff, -1, 1);   // 1 = atârnă în repaus, 0 = energia poziției verticale
+  if (z >= 0) return [0, 1 - z, z];
+  const ex = Math.min(1, -4 * z); return [ex, 1 - ex, 0];
+}
+function pumpFz(E, w, thw, P, act, sn = 0.6, eoff = 0) {
+  const Dm = energyMu(E, P, eoff);
+  const z = clamp(w * Math.cos(thw) / sn, -1, 1), S = [Math.max(0, -z), 1 - Math.abs(z), Math.max(0, z)];
+  let num = 0, den = 0;
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+    const wt = Math.min(Dm[i], S[j]); num += wt * PUMP_OUT[i][j]; den += wt;
+    if (act) act[i * 3 + j] = wt;
+  }
+  return den > 0 ? num / den : 0;
+}
+// gradul „pendul aproape de vertical” (supervizorul fuzzy)
+const UP1 = 0.55, UP2 = 1.05;
+const muUp = (a, u1 = UP1, u2 = UP2) => (a < u1 ? 1 : a > u2 ? 0 : (u2 - a) / (u2 - u1));
+
+function makeFuzzy(g) {
+  const c = { kind: 'fuzzy', g, B: makeBalanceRB(g.n, g.p), last: {} };
+  c.act = new Float64Array(g.n * g.n); c.pact = new Float64Array(9);
+  c.rebuild = () => { c.B = makeBalanceRB(g.n, g.p); c.act = new Float64Array(g.n * g.n); };
+  c.reset = () => {};
+  c.step = (meas, ref, Ts, Fm, P) => {
+    const thw = wrap(meas.th), e = thw - ref;
+    const ub = Fm * balanceFz(e / g.es, meas.w / g.ds, c.B, c.act);
+    if (!g.supervisor) { c.last = { ub, us: 0, mu: 1, E: 0 }; c.pact.fill(0); return ub; }
+    const E = 0.5 * (4 / 3 * P.m * P.l * P.l) * meas.w * meas.w + P.m * G * P.l * (Math.cos(thw) - 1);
+    const kc = g.kc ?? 3;
+    const us = clamp(Fm * pumpFz(E, meas.w, thw, P, c.pact, g.sn ?? 0.6, g.eoff ?? 0) - kc * meas.x - kc * meas.v, -Fm, Fm);
+    const mu = muUp(Math.abs(thw), g.up1 ?? UP1, g.up2 ?? UP2);
+    c.last = { ub, us, mu, E };
+    return mu * ub + (1 - mu) * us;
+  };
+  return c;
+}
+
+// ---- o instalație simulată (pendul + controller), pas fizic 1 ms
+const KX = 0.05, KV = 0.08, REFMAX = 0.15;
+// parametri impliciți (aleși prin simulare: vezi sweep.js)
+const PID_DEFAULT = { kp: 40, ki: 4, kd: 8 };
+const FZ_DEFAULT = { n: 7, p: 1.5, es: 0.2, ds: 1.2, supervisor: true, sn: 0.6, kc: 2, eoff: 0.05, up1: 0.55, up2: 1.05 };
+function makePlant(ctrl, P, cfg) {
+  const pl = { ctrl, P, cfg };
+  pl.reset = (th0, seed) => {
+    pl.s = [0, 0, th0, 0]; pl.t = 0; pl.F = 0; pl.Fprev = 0; pl.acc = 0; pl.push = null;
+    pl.gauss = gaussFrom(mulberry32(seed || 7)); ctrl.reset();
+    pl.m = { ise: 0, eff: 0, var: 0, upT: 0, falls: 0, walls: 0, fallen: Math.abs(wrap(th0)) > Math.PI / 2, atWall: false, tUp: null, maxAbs: 0 };
+  };
+  pl.advance = (dtTotal) => {
+    const dt = 0.001, Ts = cfg.Ts, P = pl.P;
+    let n = Math.round(dtTotal / dt);
+    while (n-- > 0) {
+      if (pl.acc <= 1e-9) {
+        const [x, v, th, w] = pl.s, nz = cfg.noise;
+        const meas = { x, v, th: th + nz * pl.gauss(), w: w + 10 * nz * pl.gauss() };
+        const ref = clamp(-KX * x - KV * v, -REFMAX, REFMAX);
+        pl.F = clamp(ctrl.step(meas, ref, Ts, cfg.Fm, P), -cfg.Fm, cfg.Fm);
+        pl.m.var += Math.abs(pl.F - pl.Fprev); pl.Fprev = pl.F; pl.acc += Ts;
+      }
+      let Fa = pl.F;
+      if (pl.push && pl.t >= pl.push.t0 && pl.t < pl.push.t0 + 0.1) Fa += pl.push.F;
+      pl.s = rk4(pl.s, Fa, P, dt);
+      if (Math.abs(pl.s[0]) > cfg.track) {
+        pl.s[0] = Math.sign(pl.s[0]) * cfg.track; pl.s[1] = 0;
+        if (!pl.m.atWall) pl.m.walls++; pl.m.atWall = true;
+      } else if (Math.abs(pl.s[0]) < cfg.track - 0.05) pl.m.atWall = false;
+      pl.t += dt; pl.acc -= dt;
+      const a = Math.abs(wrap(pl.s[2]));
+      pl.m.ise += a * a * dt; pl.m.eff += pl.F * pl.F * dt; pl.m.maxAbs = Math.max(pl.m.maxAbs, a);
+      if (a < 0.05 && Math.abs(pl.s[3]) < 0.5) { pl.m.upT += dt; if (pl.m.tUp == null && pl.t > 0.3) pl.m.tUp = pl.t; }
+      if (a > Math.PI / 2 && !pl.m.fallen) { pl.m.fallen = true; pl.m.falls++; }
+      if (a < 0.2) pl.m.fallen = false;
+    }
+  };
+  return pl;
+}
+
+if (typeof module !== 'undefined') module.exports = {
+  G, clamp, wrap, mfVal, termPeak, CRANE, CRANE_RULES_COURSE, CRANE_RULES_FULL, craneInfer,
+  derivs, rk4, makePID, makeBalanceRB, balanceFz, pumpFz, muUp, makeFuzzy, makePlant, PID_DEFAULT, FZ_DEFAULT, KX, KV, REFMAX,  mfN, PUMP_OUT, ENERGY_TERMS, energyMu, UP1, UP2,
+};
+</script>
+<script>// app.js – interfața demo-ului (folosește funcțiile din core.js)
+(function () {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const D2R = Math.PI / 180, R2D = 180 / Math.PI;
+const fmt = (v, d = 1) => (v == null || !isFinite(v) ? '–' : (Math.abs(v) < 0.5 * Math.pow(10, -d) ? 0 : v).toFixed(d));
+
+// ------------------------------------------------------------------ culori din temă
+const CSS = {};
+function readCSS() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ['bg', 'panel', 'soft', 'ink', 'muted', 'line', 'accent', 'pid', 'fz', 'ok', 'warn', 'bad', 'neg', 'pos', 'zero',
+    't0', 't1', 't2', 't3', 't4', 't5']) CSS[k] = cs.getPropertyValue('--' + k).trim();
+}
+function hex2rgb(h) { h = h.replace('#', ''); if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  const n = parseInt(h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+const rgba = (h, a) => { const [r, g, b] = hex2rgb(h); return `rgba(${r},${g},${b},${a})`; };
+function mix(h1, h2, t) { const a = hex2rgb(h1), b = hex2rgb(h2);
+  return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(',')})`; }
+// valoare în [-1, 1] -> culoare divergentă (albastru negativ, roz pozitiv)
+const divColor = (v, strength = 0.85) => (v < 0 ? mix(CSS.panel, CSS.neg, Math.min(1, -v) * strength) : mix(CSS.panel, CSS.pos, Math.min(1, v) * strength));
+const TERMC = () => [CSS.t0, CSS.t1, CSS.t2, CSS.t3, CSS.t4, CSS.t5];
+
+function fitCanvas(cv) {
+  const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  const w = Math.max(10, Math.round(r.width)), h = Math.max(10, Math.round(r.height));
+  if (cv.width !== Math.round(w * d) || cv.height !== Math.round(h * d)) { cv.width = Math.round(w * d); cv.height = Math.round(h * d); }
+  const ctx = cv.getContext('2d'); ctx.setTransform(d, 0, 0, d, 0, 0); return { ctx, w, h };
+}
+function arrow(ctx, x0, y0, x1, y1, color, width = 2, head = 8) {
+  const a = Math.atan2(y1 - y0, x1 - x0); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width;
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1 - Math.cos(a) * head * 0.6, y1 - Math.sin(a) * head * 0.6); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x1 - head * Math.cos(a - 0.45), y1 - head * Math.sin(a - 0.45));
+  ctx.lineTo(x1 - head * Math.cos(a + 0.45), y1 - head * Math.sin(a + 0.45)); ctx.closePath(); ctx.fill();
+}
+function segInit(id, onChange) {
+  const el = $('#' + id);
+  el.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return;
+    $$('button', el).forEach(x => x.setAttribute('aria-pressed', x === b)); onChange(b.dataset.v); });
+}
+function segSet(id, v) { $$('button', $('#' + id)).forEach(x => x.setAttribute('aria-pressed', x.dataset.v === String(v))); }
+
+// ------------------------------------------------------------------ taburi
+const TABS = ['pendul', 'inferenta', 'suprafata'];
+let current = 'pendul';
+function showTab() {
+  let h = location.hash.slice(1); if (!TABS.includes(h)) h = 'pendul';
+  current = h;
+  $$('nav.tabs a').forEach(a => a.setAttribute('aria-selected', a.dataset.tab === h));
+  $$('.view').forEach(v => { v.hidden = v.id !== 'v-' + h; });
+  if (h === 'inferenta') scheduleInf(true);
+  if (h === 'suprafata') drawSurface();
+  if (h === 'pendul') drawPendulum();
+}
+
+// =================================================================== PENDUL
+const PLANT = { M: 1, m: 0.2, l: 0.5, b: 0.1 };
+const CFG = { Ts: 0.01, Fm: 10, noise: 0, track: 2.0 };
+const PIDG = { ...PID_DEFAULT };
+const FZG = { ...FZ_DEFAULT };
+const pid = makePID(PIDG), fzc = makeFuzzy(FZG);
+const plants = [makePlant(pid, PLANT, CFG), makePlant(fzc, PLANT, CFG)];
+const COLORS = () => [CSS.pid, CSS.fz];
+const hist = [[], []];
+const HIST_T = 12;
+
+const BASE = { m: 0.2, L: 1.0, Fm: 10, nz: 0, Ts: 10 };
+const SCEN = [
+  { id: 'echilibrare', label: 'Echilibrare', th0: 5,
+    title: 'Echilibrare: pornire de la 5°',
+    text: 'Aproape de verticală, ambele controllere țin pendulul la fel de bine. Un PID bine acordat nu are de ce să fie mai slab: în jurul echilibrului, controllerul fuzzy se comportă aproape ca un PD.' },
+  { id: 'zgomot', label: 'Zgomot pe senzori', th0: 3, set: { nz: 0.6 },
+    title: 'Zgomot pe senzorul de unghi (σ = 0.6°)',
+    text: 'Urmăriți graficul forței și rândul „Activitate actuator”. Suprafața fuzzy are câștig mic lângă zero, deci amplifică mai puțin zgomotul: comanda e mai calmă (cu aproximativ 20% mai puțină agitație), cu o eroare de unghi practic egală.' },
+  { id: 'lovitura', label: 'Lovitură de 30 N', th0: 0, push: { t: 1.5, F: 30 },
+    title: 'Lovitură de 30 N la t = 1.5 s',
+    text: 'Lovitura e prea mare pentru oricare controller: ambele pendule cad. Fuzzy-ul are reguli pentru această situație („dacă a căzut, pompează energie, apoi prinde-l”) și îl readuce sus fără să atingă capetele șinei. PID-ul revine doar după ce căruciorul lovește capătul de cursă, adică printr-un noroc. Comparați și efortul.' },
+  { id: 'unghi', label: 'Pornire de la 60°', th0: 60,
+    title: 'Pornire de la 60°: dincolo de zona liniară',
+    text: 'La 60°, motorul nu are destulă forță ca pendulul să fie prins direct. Supervizorul fuzzy trece lin pe regulile de energie: lasă pendulul să cadă controlat, apoi îl ridică. PID-ul împinge la maximum și ajunge la capetele șinei.' },
+  { id: 'swing', label: 'Swing-up de jos', th0: 177,
+    title: 'Swing-up: pendulul pornește atârnând în jos',
+    text: 'Un PID liniar este proiectat pentru un singur punct de funcționare și nu are cum să ridice pendulul. Regulile fuzzy descriu strategia unui operator: „balansează căruciorul ca să crești energia, apoi prinde pendulul sus”. Este o strategie neliniară, scrisă în cuvinte.' },
+  { id: 'greu', label: 'Pendul greu și lung', th0: 10, set: { m: 0.35, L: 1.5 }, push: { t: 2, F: 20 },
+    title: 'Pendul greu și lung (0.35 kg, 1.5 m), lovitură de 20 N',
+    text: 'Aici PID-ul este mai bun: regulile fuzzy au fost acordate pentru pendulul de 0.2 kg și 1 m, iar acum căruciorul atinge capătul de cursă. Controlul fuzzy nu este magic: e la fel de bun ca regulile scrise de expert.' },
+];
+let scen = SCEN[0], running = true, speed = 1;
+
+const SL = {
+  m: ['s_m', 'o_m', v => fmt(v, 2) + ' kg'], L: ['s_L', 'o_L', v => fmt(v, 2) + ' m'], Fm: ['s_Fm', 'o_Fm', v => fmt(v, 1) + ' N'],
+  nz: ['s_nz', 'o_nz', v => fmt(v, 2) + '°'], Ts: ['s_Ts', 'o_Ts', v => fmt(v, 0) + ' ms'],
+  kp: ['s_kp', 'o_kp', v => fmt(v, 0)], ki: ['s_ki', 'o_ki', v => fmt(v, 1)], kd: ['s_kd', 'o_kd', v => fmt(v, 1)],
+  es: ['s_es', 'o_es', v => fmt(v, 2) + ' rad (' + fmt(v * R2D, 0) + '°)'], ds: ['s_ds', 'o_ds', v => fmt(v, 2) + ' rad/s'],
+  p: ['s_p', 'o_p', v => fmt(v, 2)],
+};
+function getSl(k) { return parseFloat($('#' + SL[k][0]).value); }
+function setSl(k, v) { $('#' + SL[k][0]).value = v; $('#' + SL[k][1]).textContent = SL[k][2](v); }
+function applySettings() {
+  PLANT.m = getSl('m'); PLANT.l = getSl('L') / 2; CFG.Fm = getSl('Fm'); CFG.noise = getSl('nz') * D2R; CFG.Ts = getSl('Ts') / 1000;
+  PIDG.kp = getSl('kp'); PIDG.ki = getSl('ki'); PIDG.kd = getSl('kd');
+  FZG.es = getSl('es'); FZG.ds = getSl('ds');
+  const p = getSl('p'); if (p !== FZG.p) { FZG.p = p; fzc.rebuild(); paintBalGrid(true); $('#s_p2').value = p; $('#o_p2').textContent = fmt(p, 2); }
+  FZG.supervisor = $('#s_sup').checked;
+  for (const k in SL) $('#' + SL[k][1]).textContent = SL[k][2](getSl(k));
+  if (current === 'suprafata') drawSurface();
+}
+function setDefaults(over = {}) {
+  const v = { ...BASE, ...over };
+  setSl('m', v.m); setSl('L', v.L); setSl('Fm', v.Fm); setSl('nz', v.nz); setSl('Ts', v.Ts);
+  setSl('kp', PID_DEFAULT.kp); setSl('ki', PID_DEFAULT.ki); setSl('kd', PID_DEFAULT.kd);
+  setSl('es', FZ_DEFAULT.es); setSl('ds', FZ_DEFAULT.ds); setSl('p', FZ_DEFAULT.p);
+  $('#s_sup').checked = true;
+  if (FZG.n !== FZ_DEFAULT.n) { FZG.n = FZ_DEFAULT.n; segSet('segN', FZG.n); fzc.rebuild(); buildBalGrid(); }
+  applySettings();
+}
+function restart() {
+  for (const pl of plants) {
+    pl.reset(scen.th0 * D2R, 7);
+    if (scen.push) pl.push = { t0: scen.push.t, F: scen.push.F };
+  }
+  hist[0].length = 0; hist[1].length = 0; record();
+  drawPendulum();
+}
+function selectScenario(s) {
+  scen = s;
+  $$('#scenBtns button').forEach(b => b.setAttribute('aria-pressed', b.dataset.id === s.id));
+  $('#scenTitle').textContent = s.title; $('#scenText').textContent = s.text;
+  setDefaults(s.set || {});
+  restart(); setRunning(true);
+}
+function setRunning(r) { running = r; $('#btnRun').textContent = r ? '⏸ Pauză' : '▶ Pornește'; }
+function manualPush(F) { for (const pl of plants) pl.push = { t0: pl.t, F }; if (!running) setRunning(true); }
+function record() {
+  plants.forEach((pl, i) => {
+    const h = hist[i]; h.push([pl.t, wrap(pl.s[2]) * R2D, pl.F]);
+    while (h.length && h[0][0] < pl.t - HIST_T) h.shift();
+  });
+}
+
+// ---- desen: pendul pe cărucior
+function statusOf(pl, i) {
+  const a = Math.abs(wrap(pl.s[2])), w = Math.abs(pl.s[3]);
+  if (pl.m.atWall) return ['Capăt de cursă!', 'bad'];
+  if (a > Math.PI / 2) return i === 1 && FZG.supervisor ? ['Căzut: pompează energie', 'warn'] : ['Căzut', 'bad'];
+  if (i === 1 && FZG.supervisor && fzc.last.mu < 0.999) return ['Swing-up / prindere', 'warn'];
+  if (a < 0.05 && w < 0.5) return ['Echilibrat', 'ok'];
+  return ['Corectează', 'neutral'];
+}
+function drawArena(cv, pl, color, idx) {
+  const { ctx, w, h } = fitCanvas(cv);
+  ctx.clearRect(0, 0, w, h);
+  const L = 2 * PLANT.l, tr = CFG.track;
+  const s = Math.min((w - 24) / (2 * tr + 0.5), (h - 20) / (2 * L + 0.35));
+  const cx = w / 2, ry = h / 2 + 4;
+  const X = x => cx + x * s;
+  // șina
+  ctx.strokeStyle = CSS.muted; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X(-tr - 0.12), ry); ctx.lineTo(X(tr + 0.12), ry); ctx.stroke();
+  ctx.fillStyle = CSS.muted;
+  for (const sg of [-1, 1]) ctx.fillRect(X(sg * (tr + 0.12)) - (sg > 0 ? 0 : 6), ry - 14, 6, 28);
+  // marcaje de poziție
+  ctx.font = '11px ' + getComputedStyle(document.body).fontFamily; ctx.textAlign = 'center';
+  for (let x = -2; x <= 2; x++) {
+    ctx.strokeStyle = CSS.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(x), ry + 6); ctx.lineTo(X(x), ry + 12); ctx.stroke();
+    ctx.fillStyle = CSS.muted; ctx.fillText(x + ' m', X(x), ry + 24);
+  }
+  // verticala de referință
+  const [x, , th] = pl.s, px = X(x);
+  ctx.setLineDash([3, 4]); ctx.strokeStyle = CSS.line; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(px, ry); ctx.lineTo(px, ry - L * s - 6); ctx.stroke(); ctx.setLineDash([]);
+  // forța
+  const F = pl.F, Fm = CFG.Fm;
+  if (Math.abs(F) > 0.05 * Fm) arrow(ctx, px, ry + 34, px + (F / Fm) * 0.55 * s, ry + 34, color, 3, 9);
+  if (pl.push && pl.t >= pl.push.t0 && pl.t < pl.push.t0 + 0.1) {
+    arrow(ctx, px - Math.sign(pl.push.F) * 0.75 * s, ry - 4, px - Math.sign(pl.push.F) * 0.2 * s, ry - 4, CSS.bad, 4, 12);
+  }
+  // căruciorul
+  const cw = 0.34 * s, ch = 0.16 * s;
+  ctx.fillStyle = CSS.panel; ctx.strokeStyle = CSS.ink; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(px - cw / 2, ry - ch / 2, cw, ch, 4); ctx.fill(); ctx.stroke();
+  // tija
+  const tx = px + L * s * Math.sin(th), ty = ry - L * s * Math.cos(th);
+  ctx.strokeStyle = color; ctx.lineWidth = Math.max(4, 0.045 * s); ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(px, ry); ctx.lineTo(tx, ty); ctx.stroke(); ctx.lineCap = 'butt';
+  ctx.fillStyle = color; ctx.beginPath(); ctx.arc(tx, ty, Math.max(6, 0.055 * s) * Math.sqrt(PLANT.m / 0.2), 0, 2 * Math.PI); ctx.fill();
+  ctx.fillStyle = CSS.ink; ctx.beginPath(); ctx.arc(px, ry, 3.5, 0, 2 * Math.PI); ctx.fill();
+  // mod (doar pentru fuzzy)
+  if (idx === 1 && FZG.supervisor) {
+    const mu = fzc.last.mu ?? 1;
+    ctx.textAlign = 'left'; ctx.fillStyle = CSS.muted; ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
+    ctx.fillText('echilibrare ' + Math.round(mu * 100) + '% · energie ' + Math.round((1 - mu) * 100) + '%', 10, 18);
+  }
+}
+function drawChart(cv, k, yMaxFn, unit) {
+  const { ctx, w, h } = fitCanvas(cv);
+  ctx.clearRect(0, 0, w, h);
+  const padL = 38, padR = 18, padT = 8, padB = 20, pw = w - padL - padR, ph = h - padT - padB;
+  const tEnd = Math.max(HIST_T, plants[0].t), t0 = tEnd - HIST_T;
+  const ymax = yMaxFn();
+  const X = t => padL + (t - t0) / HIST_T * pw, Y = v => padT + ph / 2 - (v / ymax) * ph / 2;
+  const font = '11px ' + getComputedStyle(document.body).fontFamily;
+  ctx.font = font; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (const v of [-ymax, -ymax / 2, 0, ymax / 2, ymax]) {
+    ctx.strokeStyle = v === 0 ? CSS.muted : CSS.line; ctx.lineWidth = v === 0 ? 1 : 0.7; ctx.globalAlpha = v === 0 ? 0.6 : 1;
+    ctx.beginPath(); ctx.moveTo(padL, Y(v)); ctx.lineTo(w - padR, Y(v)); ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.fillStyle = CSS.muted; ctx.fillText(fmt(v, 0), padL - 5, Y(v));
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let t = Math.ceil(t0 / 2) * 2; t <= tEnd + 1e-9; t += 2) { ctx.fillStyle = CSS.muted; ctx.fillText(fmt(t, 0) + ' s', X(t), h - padB + 5); }
+  ctx.save(); ctx.beginPath(); ctx.rect(padL, padT, pw, ph); ctx.clip();
+  [1, 0].forEach(i => {
+    const hs = hist[i]; if (hs.length < 2) return;
+    ctx.strokeStyle = COLORS()[i]; ctx.lineWidth = 1.8; ctx.beginPath();
+    let prev = null;
+    hs.forEach(p => {
+      const xx = X(p[0]), yy = Y(Math.max(-ymax * 1.05, Math.min(ymax * 1.05, p[k])));
+      if (prev != null && k === 1 && Math.abs(p[1] - prev) > 180) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+      prev = p[k];
+    });
+    ctx.stroke();
+  });
+  ctx.restore();
+}
+function thetaRange() {
+  let m = 5; for (const hs of hist) for (const p of hs) m = Math.max(m, Math.abs(p[1]));
+  for (const r of [5, 10, 20, 30, 45, 90, 180]) if (m <= r * 1.02) return r; return 180;
+}
+const METRICS = [
+  ['Timp în echilibru', pl => 100 * pl.m.upT / Math.max(pl.t, 1e-6), v => fmt(v, 0) + '%', +1],
+  ['Primul echilibru', pl => pl.m.tUp, v => (v == null ? 'niciodată' : fmt(v, 1) + ' s'), -1],
+  ['Căderi (|θ| > 90°)', pl => pl.m.falls, v => fmt(v, 0), -1],
+  ['Lovituri la capăt de cursă', pl => pl.m.walls, v => fmt(v, 0), -1],
+  ['Eroare ∫θ² dt', pl => pl.m.ise, v => fmt(v, 3), -1],
+  ['Efort ∫F² dt', pl => pl.m.eff, v => fmt(v, 0), -1],
+  ['Activitate actuator Σ|ΔF|', pl => pl.m.var, v => fmt(v, 0), -1],
+];
+function buildMetrics() {
+  $('#metrics').innerHTML = '<thead><tr><th></th><th style="color: var(--pid)">PID</th><th style="color: var(--fz)">Fuzzy</th></tr></thead><tbody>' +
+    METRICS.map((m, i) => `<tr><td>${m[0]}</td><td class="num pid" id="mp${i}"></td><td class="num fz" id="mf${i}"></td></tr>`).join('') + '</tbody>';
+}
+function updateMetrics() {
+  METRICS.forEach((m, i) => {
+    const a = m[1](plants[0]), b = m[1](plants[1]);
+    const ea = $('#mp' + i), eb = $('#mf' + i); ea.textContent = m[2](a); eb.textContent = m[2](b);
+    let wa = false, wb = false;
+    if (a == null && b != null) wb = true; else if (b == null && a != null) wa = true;
+    else if (a != null && b != null) {
+      const better = (x, y) => (m[3] > 0 ? x > y : x < y);
+      const sig = Math.abs(a - b) > 0.05 * Math.max(Math.abs(a), Math.abs(b)) && Math.abs(a - b) > 1e-6;
+      if (sig) { wa = better(a, b); wb = better(b, a); }
+    }
+    ea.classList.toggle('win', wa); eb.classList.toggle('win', wb);
+  });
+}
+// ---- interiorul controllerelor
+function barRow(name, v, max, color, unit = '') {
+  const f = Math.max(-1, Math.min(1, v / max)), l = 50 + Math.min(0, f) * 50, wd = Math.abs(f) * 50;
+  return `<span>${name}</span><div class="bar"><span style="left:${l}%;width:${wd}%;background:${color}"></span></div><span class="num">${fmt(v, unit ? 2 : 1)}${unit}</span>`;
+}
+function outLabel(o) {
+  if (Math.abs(o) < 1e-9) return '0';
+  const s = o > 0 ? '+' : '−', a = Math.abs(o);
+  return a > 0.995 ? s + '1' : s + a.toFixed(2).slice(1);
+}
+function termLabels(n) { const h = (n - 1) / 2, out = []; for (let k = -h; k <= h; k++) out.push(k < 0 ? 'N' + (-k) : k > 0 ? 'P' + k : 'Z'); return out; }
+function buildBalGrid() {
+  const n = FZG.n, lab = termLabels(n), g = $('#balGrid');
+  g.style.gridTemplateColumns = `auto repeat(${n}, minmax(0, 1fr))`;
+  let html = '<div class="hdr"></div>' + lab.map(l => `<div class="hdr">${l}</div>`).join('');
+  for (let i = 0; i < n; i++) {
+    html += `<div class="hdr">${lab[i]}</div>`;
+    for (let j = 0; j < n; j++) html += `<div id="bg${i}_${j}"></div>`;
+  }
+  g.innerHTML = html; paintBalGrid(true);
+}
+function paintBalGrid(full) {
+  const B = fzc.B, n = B.n;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    const el = $(`#bg${i}_${j}`); if (!el) continue;
+    const o = B.O[B.rule(i, j)], a = fzc.act[i * n + j] || 0;
+    if (full) el.textContent = outLabel(o);
+    el.style.background = divColor(o, 0.25 + 0.6 * a);
+    el.style.outline = a > 0.01 ? `${1 + 2 * a}px solid ${CSS.ink}` : 'none';
+    el.style.outlineOffset = '-1px';
+    el.style.color = a > 0.01 ? CSS.ink : CSS.muted; el.style.fontWeight = a > 0.3 ? '700' : '400';
+  }
+}
+const PUMP_SYM = v => (v <= -1 ? '⟵' : v < 0 ? '←' : v >= 1 ? '⟶' : v > 0 ? '→' : '·');
+function buildPumpGrid() {
+  const g = $('#pumpGrid'); g.style.gridTemplateColumns = 'auto repeat(3, minmax(0, 1fr))';
+  const cols = ['ω·cosθ<0', '≈0', '>0'];
+  let html = '<div class="hdr"></div>' + cols.map(c => `<div class="hdr" style="aspect-ratio:auto">${c}</div>`).join('');
+  ENERGY_TERMS.forEach((t, i) => {
+    html += `<div class="hdr" style="aspect-ratio:auto;justify-content:end">${t}</div>`;
+    for (let j = 0; j < 3; j++) html += `<div id="pg${i}_${j}" style="aspect-ratio:auto;min-height:26px;font-size:15px">${PUMP_SYM(PUMP_OUT[i][j])}</div>`;
+  });
+  g.innerHTML = html;
+}
+function paintInside() {
+  const L = pid.last, Fm = CFG.Fm;
+  $('#pidBars').innerHTML = barRow('P · Kp·e', L.p || 0, Fm, CSS.pid) + barRow('I · Ki·∫e', L.i || 0, Fm, CSS.pid) +
+    barRow('D · Kd·ė', L.d || 0, Fm, CSS.pid) + barRow('Total (saturat)', plants[0].F, Fm, CSS.ink);
+  paintBalGrid(false);
+  const f = fzc.last, sup = FZG.supervisor;
+  $('#supBars').innerHTML = barRow('Echilibrare μ', sup ? f.mu ?? 1 : 1, 1, CSS.fz, '') + barRow('Energie 1−μ', sup ? 1 - (f.mu ?? 1) : 0, 1, CSS.warn, '') +
+    barRow('F echilibrare', f.ub || 0, Fm, CSS.fz) + barRow('F energie', sup ? f.us || 0 : 0, Fm, CSS.warn);
+  ENERGY_TERMS.forEach((t, i) => { for (let j = 0; j < 3; j++) {
+    const el = $(`#pg${i}_${j}`), a = sup ? fzc.pact[i * 3 + j] || 0 : 0;
+    el.style.background = mix(CSS.soft, CSS.warn, 0.7 * a); el.style.color = a > 0.05 ? CSS.ink : CSS.muted;
+    el.style.outline = a > 0.05 ? `${1 + 2 * a}px solid ${CSS.ink}` : 'none'; el.style.outlineOffset = '-1px';
+  } });
+  $('#pumpNote').textContent = sup ? 'rânduri: energie · coloane: ω·cosθ · ⟶ împinge spre dreapta' : 'supervizor oprit: doar regulile de echilibrare';
+}
+function drawPendulum() {
+  if (current !== 'pendul') return;
+  plants.forEach((pl, i) => {
+    drawArena($(i ? '#cvFz' : '#cvPid'), pl, COLORS()[i], i);
+    const [st, cls] = statusOf(pl, i), pill = $(i ? '#pillFz' : '#pillPid');
+    pill.textContent = st; pill.className = 'pill ' + cls;
+    $(i ? '#roFz' : '#roPid').innerHTML = `<span>θ <b>${fmt(wrap(pl.s[2]) * R2D, 1)}°</b></span><span>ω <b>${fmt(pl.s[3] * R2D, 0)}°/s</b></span>` +
+      `<span>x <b>${fmt(pl.s[0], 2)} m</b></span><span>F <b>${fmt(pl.F, 1)} N</b></span>`;
+  });
+  drawChart($('#chTheta'), 1, thetaRange);
+  drawChart($('#chForce'), 2, () => CFG.Fm);
+  updateMetrics(); paintInside();
+  $('#simClock').textContent = 't = ' + fmt(plants[0].t, 1) + ' s';
+}
+let lastTs = null;
+function frame(ts) {
+  if (lastTs == null) lastTs = ts;
+  const dt = Math.min(0.05, (ts - lastTs) / 1000) * speed; lastTs = ts;
+  if (running && current === 'pendul' && !document.hidden) {
+    for (const pl of plants) pl.advance(dt);
+    record(); drawPendulum();
+  }
+  requestAnimationFrame(frame);
+}
+function initPendulum() {
+  $('#scenBtns').innerHTML = SCEN.map(s => `<button class="chip" data-id="${s.id}">${s.label}</button>`).join('');
+  $('#scenBtns').addEventListener('click', e => { const b = e.target.closest('button'); if (b) selectScenario(SCEN.find(s => s.id === b.dataset.id)); });
+  $('#btnRun').onclick = () => setRunning(!running);
+  $('#btnReset').onclick = () => { restart(); setRunning(true); };
+  $('#btnPushL').onclick = () => manualPush(-15); $('#btnPushR').onclick = () => manualPush(15);
+  segInit('speedSeg', v => { speed = parseFloat(v); });
+  for (const k in SL) $('#' + SL[k][0]).addEventListener('input', applySettings);
+  $('#s_sup').addEventListener('change', applySettings);
+  $('#pidStd').onclick = () => { setSl('kp', 40); setSl('ki', 4); setSl('kd', 8); applySettings(); };
+  $('#pidAgr').onclick = () => { setSl('kp', 100); setSl('ki', 10); setSl('kd', 20); applySettings(); };
+  $('#fzStd').onclick = () => { setSl('es', FZ_DEFAULT.es); setSl('ds', FZ_DEFAULT.ds); setSl('p', FZ_DEFAULT.p); $('#s_sup').checked = true; applySettings(); };
+  ['#cvPid', '#cvFz'].forEach((id, i) => $(id).addEventListener('click', e => {
+    const r = e.currentTarget.getBoundingClientRect(), pl = plants[i];
+    const L = 2 * PLANT.l, s = Math.min((r.width - 24) / (2 * CFG.track + 0.5), (r.height - 20) / (2 * L + 0.35));
+    const cartX = r.width / 2 + pl.s[0] * s;
+    manualPush((e.clientX - r.left) < cartX ? -15 : 15);
+  }));
+  addEventListener('keydown', e => {
+    if (current !== 'pendul' || e.target.closest('input, select, textarea')) return;
+    if (e.key === 'ArrowLeft') { manualPush(-15); e.preventDefault(); }
+    if (e.key === 'ArrowRight') { manualPush(15); e.preventDefault(); }
+    if (e.key === ' ' && (e.target === document.body || e.target.tagName === 'CANVAS')) { setRunning(!running); e.preventDefault(); }
+  });
+  buildMetrics(); buildBalGrid(); buildPumpGrid();
+  selectScenario(SCEN[0]);
+}
+
+// =================================================================== INFERENȚĂ (macaraua)
+const INF = { model: null, rules: null, opts: { and: 'min', imp: 'min', defuzz: 'com' }, angle: 20, dist: 12, res: null };
+const COURSE_IDX = { '3,3': '#1', '3,2': '#2', '4,2': '#3' };
+const cloneModel = () => JSON.parse(JSON.stringify(CRANE));
+const SVGNS = 'http://www.w3.org/2000/svg';
+const MONO = 'IBM Plex Mono, ui-monospace, Menlo, monospace';
+function el(tag, attrs, parent) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+const TICKS = { angle: [-90, -45, 0, 25, 50, 90], dist: [-10, -5, 0, 5, 10, 20, 30, 35], power: [-30, -16, -8, 0, 8, 16, 30] };
+function mfGeom(svg, varDef, H) {
+  const [lo, hi] = varDef.range, x0 = 40, x1 = 505, yt = 40, yb = H - 34;
+  return { lo, hi, x0, x1, yt, yb, X: v => x0 + (v - lo) / (hi - lo) * (x1 - x0), Y: m => yb - (yb - yt) * m,
+    inv: px => lo + (px - x0) / (x1 - x0) * (hi - lo) };
+}
+function drawAxes(svg, g, key, unit) {
+  el('line', { x1: g.x0, y1: g.yb, x2: g.x1 + 6, y2: g.yb, stroke: CSS.muted, 'stroke-width': 1 }, svg);
+  el('line', { x1: g.x0, y1: g.yb, x2: g.x0, y2: g.yt - 10, stroke: CSS.muted, 'stroke-width': 1 }, svg);
+  for (const m of [0, 0.5, 1]) {
+    el('line', { x1: g.x0 - 4, y1: g.Y(m), x2: g.x0, y2: g.Y(m), stroke: CSS.muted }, svg);
+    const t = el('text', { x: g.x0 - 7, y: g.Y(m) + 4, 'text-anchor': 'end', 'font-size': 11, fill: CSS.muted, 'font-family': MONO }, svg); t.textContent = m;
+    if (m === 1) el('line', { x1: g.x0, y1: g.Y(1), x2: g.x1, y2: g.Y(1), stroke: CSS.line, 'stroke-dasharray': '3 4' }, svg);
+  }
+  for (const v of TICKS[key]) {
+    el('line', { x1: g.X(v), y1: g.yb, x2: g.X(v), y2: g.yb + 4, stroke: CSS.muted }, svg);
+    const t = el('text', { x: g.X(v), y: g.yb + 16, 'text-anchor': 'middle', 'font-size': 11, fill: CSS.muted, 'font-family': MONO }, svg); t.textContent = v;
+  }
+  const t = el('text', { x: g.x1 + 6, y: g.yb + 30, 'text-anchor': 'end', 'font-size': 11, fill: CSS.muted }, svg); t.textContent = '[' + unit + ']';
+  const ty = el('text', { x: g.x0 - 22, y: g.Y(0.75) + 4, 'text-anchor': 'end', 'font-size': 12, fill: CSS.muted, 'font-style': 'italic' }, svg); ty.textContent = 'μ';
+}
+const polyPts = (g, pts, varDef) => {
+  const [lo, hi] = varDef.range, full = [[lo, mfVal(pts, lo)], ...pts.filter(p => p[0] > lo && p[0] < hi), [hi, mfVal(pts, hi)]];
+  return full.map(p => `${g.X(p[0])},${g.Y(p[1])}`).join(' ');
+};
+function drawInputMF(svgId, key, value, mu) {
+  const svg = $('#' + svgId); svg.innerHTML = '';
+  const varDef = INF.model[key], g = mfGeom(svg, varDef, 170), C = TERMC();
+  drawAxes(svg, g, key, varDef.unit);
+  varDef.terms.forEach((t, k) => {
+    const pp = polyPts(g, t.pts, varDef);
+    el('polygon', { points: `${g.X(varDef.range[0])},${g.yb} ${pp} ${g.X(varDef.range[1])},${g.yb}`, fill: C[k], 'fill-opacity': mu[k] > 0 ? 0.18 : 0.07, stroke: 'none' }, svg);
+    el('polyline', { points: pp, fill: 'none', stroke: C[k], 'stroke-width': mu[k] > 0 ? 2.4 : 1.6 }, svg);
+    const peak = termPeak(t.pts), lx = Math.max(g.x0 + 30, Math.min(g.x1 - 30, g.X(Math.max(varDef.range[0], Math.min(varDef.range[1], peak)))));
+    const tl = el('text', { x: lx, y: g.yt - 8 - (k % 2) * 14, 'text-anchor': 'middle', 'font-size': 11.5, fill: C[k], 'font-weight': 600 }, svg); tl.textContent = t.name;
+  });
+  // valoarea curentă
+  el('line', { x1: g.X(value), y1: g.yt - 2, x2: g.X(value), y2: g.yb, stroke: CSS.ink, 'stroke-width': 1.5, 'stroke-dasharray': '4 3' }, svg);
+  varDef.terms.forEach((t, k) => {
+    if (mu[k] <= 0) return;
+    el('line', { x1: g.x0, y1: g.Y(mu[k]), x2: g.X(value), y2: g.Y(mu[k]), stroke: C[k], 'stroke-width': 1, 'stroke-dasharray': '2 3' }, svg);
+    el('circle', { cx: g.X(value), cy: g.Y(mu[k]), r: 4.5, fill: C[k], stroke: CSS.panel, 'stroke-width': 1.5 }, svg);
+    const tx = el('text', { x: g.X(value) + 8, y: g.Y(mu[k]) - 5, 'font-size': 12, fill: CSS.ink, 'font-family': MONO, 'font-weight': 600 }, svg); tx.textContent = fmt(mu[k], 2);
+  });
+  addHandles(svg, g, varDef);
+}
+let DRAG = null;
+addEventListener('pointermove', ev => {
+  if (!DRAG) return;
+  const { svg, g, varDef, t, i, p } = DRAG;
+  const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+  const loc = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const lo = i > 0 ? t.pts[i - 1][0] : varDef.range[0], hi = i < t.pts.length - 1 ? t.pts[i + 1][0] : varDef.range[1];
+  p[0] = Math.round(Math.max(lo, Math.min(hi, g.inv(loc.x))) * 2) / 2;
+  scheduleInf(true);
+});
+addEventListener('pointerup', () => { DRAG = null; });
+addEventListener('pointercancel', () => { DRAG = null; });
+function addHandles(svg, g, varDef) {
+  const C = TERMC();
+  varDef.terms.forEach((t, k) => t.pts.forEach((p, i) => {
+    if (p[0] <= varDef.range[0] || p[0] >= varDef.range[1]) return;   // capetele domeniului rămân fixe
+    const h = el('circle', { cx: g.X(p[0]), cy: g.Y(p[1]), r: 6, fill: CSS.panel, stroke: C[k], 'stroke-width': 2, style: 'cursor: ew-resize', tabindex: 0 }, svg);
+    h.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      DRAG = { svg, g, varDef, t, i, p };
+    });
+    h.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const lo = i > 0 ? t.pts[i - 1][0] : varDef.range[0], hi = i < t.pts.length - 1 ? t.pts[i + 1][0] : varDef.range[1];
+      p[0] = Math.max(lo, Math.min(hi, p[0] + (e.key === 'ArrowLeft' ? -1 : 1))); scheduleInf(true); e.preventDefault();
+    });
+    const tt = el('title', {}, h); tt.textContent = `${t.name}: ${p[0]} ${varDef.unit} (trageți)`;
+  }));
+}
+function drawOutputMF(res) {
+  const svg = $('#mfOut'); svg.innerHTML = '';
+  const varDef = INF.model.power, g = mfGeom(svg, varDef, 190), C = TERMC();
+  drawAxes(svg, g, 'power', 'kW');
+  varDef.terms.forEach((t, k) => {
+    el('polyline', { points: polyPts(g, t.pts, varDef), fill: 'none', stroke: C[k], 'stroke-width': 1.2, 'stroke-opacity': 0.55, 'stroke-dasharray': res.act[k] > 0 ? '' : '3 3' }, svg);
+    const tl = el('text', { x: Math.max(g.x0 + 30, Math.min(g.x1 - 30, g.X(termPeak(t.pts)))), y: g.yt - 8 - (k % 2) * 14, 'text-anchor': 'middle', 'font-size': 11.5, fill: C[k], 'font-weight': 600 }, svg);
+    tl.textContent = t.name + (res.act[k] > 0 ? ' ' + fmt(res.act[k], 2) : '');
+    if (res.act[k] > 0) {   // zona tăiată / scalată a termenului
+      const N = 121, [lo, hi] = varDef.range; let d = `M${g.X(lo)},${g.yb}`;
+      for (let i = 0; i < N; i++) { const x = lo + (hi - lo) * i / (N - 1), m = mfVal(t.pts, x);
+        const v = INF.opts.imp === 'prod' ? res.act[k] * m : Math.min(res.act[k], m); d += ` L${g.X(x)},${g.Y(v)}`; }
+      d += ` L${g.X(hi)},${g.yb} Z`;
+      el('path', { d, fill: C[k], 'fill-opacity': 0.35, stroke: 'none' }, svg);
+    }
+  });
+  // mulțimea agregată (max)
+  let d = ''; for (let i = 0; i < res.xs.length; i++) d += (i ? ' L' : 'M') + g.X(res.xs[i]) + ',' + g.Y(res.ys[i]);
+  el('path', { d, fill: 'none', stroke: CSS.ink, 'stroke-width': 2 }, svg);
+  const mk = { com: res.com, cog: res.cog, mom: res.mom };
+  for (const m in mk) {
+    if (mk[m] == null) continue; const sel = m === INF.opts.defuzz;
+    el('line', { x1: g.X(mk[m]), y1: g.yt, x2: g.X(mk[m]), y2: g.yb + 2, stroke: sel ? CSS.ink : CSS.muted, 'stroke-width': sel ? 2.5 : 1, 'stroke-dasharray': sel ? '' : '3 3' }, svg);
+    if (sel) { el('polygon', { points: `${g.X(mk[m])},${g.yb + 2} ${g.X(mk[m]) - 6},${g.yb + 12} ${g.X(mk[m]) + 6},${g.yb + 12}`, fill: CSS.ink }, svg); }
+  }
+}
+function buildMatrix() {
+  const m = $('#ruleMatrix'), A = INF.model.angle.terms, Dt = INF.model.dist.terms;
+  let html = '<div class="h"></div>' + A.map(t => `<div class="h">${t.name}</div>`).join('');
+  for (let di = Dt.length - 1; di >= 0; di--) {
+    html += `<div class="h rh">${Dt[di].name}</div>`;
+    for (let ai = 0; ai < A.length; ai++) html += `<button class="cell" data-k="${di},${ai}"><span class="fill"></span><span class="t"></span><span class="w"></span></button>`;
+  }
+  m.innerHTML = html;
+  m.addEventListener('click', e => {
+    const b = e.target.closest('.cell'); if (!b) return;
+    const k = b.dataset.k, cur = INF.rules[k], n = INF.model.power.terms.length;
+    const next = cur == null ? 0 : cur + 1 >= n ? null : cur + 1;
+    if (next == null) delete INF.rules[k]; else INF.rules[k] = next;
+    scheduleInf(true);
+  });
+}
+function paintMatrix(res) {
+  const C = TERMC(), P = INF.model.power.terms;
+  const wmap = {}; res.fired.forEach(f => { wmap[f.di + ',' + f.ai] = f.w; });
+  $$('#ruleMatrix .cell').forEach(b => {
+    const k = b.dataset.k, p = INF.rules[k], w = wmap[k] || 0;
+    b.classList.toggle('empty', p == null); b.classList.toggle('on', w > 0);
+    b.querySelector('.t').textContent = p == null ? '—' : P[p].name + (COURSE_IDX[k] ? ' ' + COURSE_IDX[k] : '');
+    b.querySelector('.t').style.color = p == null ? '' : C[p];
+    b.querySelector('.w').textContent = p == null ? '' : 'w = ' + fmt(w, 2);
+    const f = b.querySelector('.fill'); f.style.height = (w * 100) + '%'; f.style.background = p == null ? 'transparent' : C[p];
+    b.setAttribute('aria-label', `Distanță ${INF.model.dist.terms[+k.split(',')[0]].name}, unghi ${INF.model.angle.terms[+k.split(',')[1]].name}: ${p == null ? 'fără regulă' : 'Putere ' + P[p].name}`);
+  });
+  const A = INF.model.angle.terms, Dt = INF.model.dist.terms, op = INF.opts.and === 'prod' ? '·' : 'min';
+  const lines = res.fired.filter(f => f.w > 0).sort((a, b) => b.w - a.w).map(f =>
+    `<div>IF Distanța = <b>${Dt[f.di].name}</b> (${fmt(res.muD[f.di], 2)}) AND Unghi = <b>${A[f.ai].name}</b> (${fmt(res.muA[f.ai], 2)}) THEN Putere = <b style="color:${C[f.p]}">${P[f.p].name}</b> → ${op === 'min' ? 'min' : 'produs'} = <b>${fmt(f.w, 2)}</b></div>`);
+  const comp = P.map((t, k) => {
+    const ws = res.fired.filter(f => f.p === k && f.w > 0).map(f => fmt(f.w, 2));
+    return ws.length ? `<div style="background:none;padding:2px 8px">compoziție: <b style="color:${C[k]}">${t.name}</b> = ${ws.length > 1 ? 'max{' + ws.join(', ') + '} = ' : ''}<b>${fmt(res.act[k], 2)}</b></div>` : '';
+  }).join('');
+  $('#firing').innerHTML = lines.length ? lines.join('') + comp : '<div>Nicio regulă nu se activează pentru aceste intrări.</div>';
+}
+function updateOutputText(res) {
+  $('#outVal').textContent = res.out == null ? 'nedefinit' : fmt(res.out, 2) + ' kW';
+  const P = INF.model.power.terms;
+  let f = '';
+  if (INF.opts.defuzz === 'com') {
+    const on = res.act.map((a, i) => [a, i]).filter(x => x[0] > 0);
+    if (on.length) f = '= (' + on.map(([a, i]) => fmt(a, 2) + '·' + fmt(termPeak(P[i].pts), 0)).join(' + ') + ') / (' + on.map(([a]) => fmt(a, 2)).join(' + ') + ')';
+  } else if (INF.opts.defuzz === 'cog') f = '= ∫ x·μ(x) dx / ∫ μ(x) dx  (aria de sub conturul negru)';
+  else f = '= mijlocul zonei în care μ(x) este maxim';
+  $('#outFormula').textContent = f;
+  const names = { com: 'centrul maximelor', cog: 'centrul de greutate', mom: 'media maximelor' };
+  $('#outOthers').textContent = Object.keys(names).filter(k => k !== INF.opts.defuzz).map(k => names[k] + ': ' + (res[k] == null ? '–' : fmt(res[k], 2) + ' kW')).join(' · ');
+}
+let heatCache = null;
+function computeHeat() {
+  const NX = 90, NY = 60, A = INF.model.angle.range, Dr = INF.model.dist.range, out = new Float64Array(NX * NY);
+  for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) {
+    const d = Dr[0] + (Dr[1] - Dr[0]) * (i + 0.5) / NX, a = A[1] - (A[1] - A[0]) * (j + 0.5) / NY;
+    const r = craneInfer(INF.model, INF.rules, a, d, { ...INF.opts, samples: 81 });
+    out[j * NX + i] = r.out == null ? NaN : r.out;
+  }
+  heatCache = { NX, NY, out };
+}
+function drawHeat() {
+  const cv = $('#heatCrane'), { ctx, w, h } = fitCanvas(cv), { NX, NY, out } = heatCache;
+  const padL = 46, padB = 26, padT = 8, padR = 10, pw = w - padL - padR, ph = h - padT - padB;
+  ctx.clearRect(0, 0, w, h);
+  const cw = pw / NX, ch = ph / NY;
+  for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) {
+    const v = out[j * NX + i];
+    ctx.fillStyle = isNaN(v) ? CSS.soft : divColor(v / 20, 1);
+    ctx.fillRect(padL + i * cw, padT + j * ch, cw + 0.6, ch + 0.6);
+  }
+  const A = INF.model.angle.range, Dr = INF.model.dist.range;
+  const X = d => padL + (d - Dr[0]) / (Dr[1] - Dr[0]) * pw, Y = a => padT + (A[1] - a) / (A[1] - A[0]) * ph;
+  const font = '11px ' + getComputedStyle(document.body).fontFamily; ctx.font = font; ctx.fillStyle = CSS.muted;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (const d of [-10, 0, 10, 20, 30]) ctx.fillText(d + ' m', X(d), h - padB + 6);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (const a of [-90, -45, 0, 45, 90]) ctx.fillText(a + '°', padL - 6, Y(a));
+  ctx.save(); ctx.translate(12, padT + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.fillText('Unghi', 0, 0); ctx.restore();
+  // poziția curentă
+  const cx = X(INF.dist), cy = Y(INF.angle);
+  ctx.strokeStyle = CSS.ink; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(cx, padT); ctx.lineTo(cx, padT + ph); ctx.moveTo(padL, cy); ctx.lineTo(padL + pw, cy); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = CSS.panel; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, 6, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+  cv._map = { padL, padT, pw, ph, A, Dr };
+  $('#heatLegend').innerHTML = `<span style="display:inline-block;width:90px;height:10px;border-radius:3px;vertical-align:middle;background:linear-gradient(90deg, ${divColor(-1, 1)}, ${CSS.panel}, ${divColor(1, 1)})"></span> &nbsp;≤ −20 … 0 … ≥ +20 kW`;
+}
+let infPending = false, heatDirty = true;
+function scheduleInf(heatToo) { if (heatToo) heatDirty = true; if (infPending) return; infPending = true; requestAnimationFrame(() => { infPending = false; renderInf(); }); }
+function renderInf() {
+  if (current !== 'inferenta') return;
+  const res = craneInfer(INF.model, INF.rules, INF.angle, INF.dist, INF.opts); INF.res = res;
+  $('#angVal').textContent = fmt(INF.angle, 1) + '°'; $('#distVal').textContent = fmt(INF.dist, 1) + ' m';
+  drawInputMF('mfAng', 'angle', INF.angle, res.muA); drawInputMF('mfDist', 'dist', INF.dist, res.muD);
+  const chips = (id, terms, mu) => { $('#' + id).innerHTML = terms.map((t, k) => `<span class="${mu[k] > 0 ? 'on' : ''}" style="${mu[k] > 0 ? 'color:' + TERMC()[k] : ''}">${t.name} ${fmt(mu[k], 2)}</span>`).join(''); };
+  chips('chAng', INF.model.angle.terms, res.muA); chips('chDist', INF.model.dist.terms, res.muD);
+  paintMatrix(res); drawOutputMF(res); updateOutputText(res);
+  if (heatDirty) { computeHeat(); heatDirty = false; }
+  drawHeat();
+}
+function initInference() {
+  INF.model = cloneModel(); INF.rules = { ...CRANE_RULES_COURSE };
+  buildMatrix();
+  const ai = $('#angIn'), di = $('#distIn'); ai.value = INF.angle; di.value = INF.dist;
+  ai.addEventListener('input', () => { INF.angle = parseFloat(ai.value); scheduleInf(false); });
+  di.addEventListener('input', () => { INF.dist = parseFloat(di.value); scheduleInf(false); });
+  segInit('segAnd', v => { INF.opts.and = v; scheduleInf(true); });
+  segInit('segImp', v => { INF.opts.imp = v; scheduleInf(true); });
+  segInit('segDef', v => { INF.opts.defuzz = v; scheduleInf(true); });
+  $('#rulesCourse').onclick = () => { INF.rules = { ...CRANE_RULES_COURSE }; scheduleInf(true); };
+  $('#rulesFull').onclick = () => { INF.rules = { ...CRANE_RULES_FULL }; scheduleInf(true); };
+  $('#rulesNone').onclick = () => { INF.rules = {}; scheduleInf(true); };
+  $('#infResetMf').onclick = () => { INF.model = cloneModel(); scheduleInf(true); };
+  $('#infCourse').onclick = () => {
+    INF.angle = 20; INF.dist = 12; ai.value = 20; di.value = 12; INF.model = cloneModel(); INF.rules = { ...CRANE_RULES_COURSE };
+    INF.opts = { and: 'min', imp: 'min', defuzz: 'com' }; segSet('segAnd', 'min'); segSet('segImp', 'min'); segSet('segDef', 'com'); scheduleInf(true);
+  };
+  $('#heatCrane').addEventListener('click', e => {
+    const cv = e.currentTarget, m = cv._map; if (!m) return; const r = cv.getBoundingClientRect();
+    const fx = (e.clientX - r.left - m.padL) / m.pw, fy = (e.clientY - r.top - m.padT) / m.ph;
+    if (fx < 0 || fx > 1 || fy < 0 || fy > 1) return;
+    INF.dist = Math.round((m.Dr[0] + fx * (m.Dr[1] - m.Dr[0])) * 10) / 10; INF.angle = Math.round((m.A[1] - fy * (m.A[1] - m.A[0])) * 2) / 2;
+    ai.value = INF.angle; di.value = INF.dist; scheduleInf(false);
+  });
+}
+
+// =================================================================== SUPRAFAȚA DE CONTROL
+const VIEW = { yaw: -0.65, pitch: 0.55, mode: 'fz' };
+const surfF = (e, de) => CFG.Fm * balanceFz(e / FZG.es, de / FZG.ds, fzc.B);
+const surfPD = (e, de) => Math.max(-CFG.Fm, Math.min(CFG.Fm, PIDG.kp * e + PIDG.kd * de));
+function drawSurface() {
+  if (current !== 'suprafata') return;
+  const cv = $('#cv3d'), { ctx, w, h } = fitCanvas(cv); ctx.clearRect(0, 0, w, h);
+  const EM = 2 * FZG.es, DM = 2 * FZG.ds, N = 26, Fm = CFG.Fm;
+  const S = Math.min(w, h) * 0.36, cx = w / 2, cy = h / 2 + h * 0.06;
+  const cy_ = Math.cos(VIEW.yaw), sy = Math.sin(VIEW.yaw), cp = Math.cos(VIEW.pitch), sp = Math.sin(VIEW.pitch);
+  const proj = (X, Y, Z) => { const x1 = X * cy_ - Y * sy, y1 = X * sy + Y * cy_;
+    return [cx + x1 * S, cy - (Z * cp + y1 * sp) * S, y1 * cp - Z * sp]; };
+  const quads = [];
+  const add = (fn, kind) => {
+    const P = [];
+    for (let i = 0; i <= N; i++) { P.push([]); for (let j = 0; j <= N; j++) {
+      const X = -1 + 2 * i / N, Y = -1 + 2 * j / N, Z = fn(X * EM, Y * DM) / Fm * 0.75; P[i].push([X, Y, Z]); } }
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+      const c = [P[i][j], P[i + 1][j], P[i + 1][j + 1], P[i][j + 1]];
+      const pr = c.map(p => proj(...p)), z = c.reduce((s, p) => s + p[2], 0) / 4 / 0.75;
+      quads.push({ pr, depth: pr.reduce((s, p) => s + p[2], 0) / 4, z, kind });
+    }
+  };
+  if (VIEW.mode !== 'pd') add(surfF, 'fz');
+  if (VIEW.mode !== 'fz') add(surfPD, 'pd');
+  // cutia de axe (în spate)
+  const box = (a, b) => { const p = proj(...a), q = proj(...b); ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); };
+  ctx.strokeStyle = CSS.line; ctx.lineWidth = 1;
+  for (const z of [-0.75, 0, 0.75]) { box([-1, -1, z], [1, -1, z]); box([-1, -1, z], [-1, 1, z]); }
+  box([-1, -1, -0.75], [-1, -1, 0.75]); box([1, -1, -0.75], [1, -1, 0.75]); box([-1, 1, -0.75], [-1, 1, 0.75]);
+  quads.sort((a, b) => b.depth - a.depth);
+  for (const q of quads) {
+    ctx.beginPath(); q.pr.forEach((p, k) => (k ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath();
+    if (q.kind === 'pd' && VIEW.mode === 'both') { ctx.fillStyle = rgba(CSS.pid, 0.18); ctx.fill(); ctx.strokeStyle = rgba(CSS.pid, 0.6); }
+    else { ctx.fillStyle = divColor(q.z, 0.9); ctx.fill(); ctx.strokeStyle = rgba(q.kind === 'pd' ? CSS.pid : CSS.fz, 0.35); }
+    ctx.lineWidth = 0.6; ctx.stroke();
+  }
+  // etichete axe
+  ctx.fillStyle = CSS.muted; ctx.font = '12px ' + getComputedStyle(document.body).fontFamily; ctx.textAlign = 'center';
+  const lab = (p, t) => { const q = proj(...p); ctx.fillText(t, q[0], q[1]); };
+  lab([1.25, -1, -0.75], 'e = ' + fmt(EM * R2D, 0) + '°'); lab([-1.25, -1, -0.75], '−' + fmt(EM * R2D, 0) + '°');
+  lab([-1, 1.25, -0.75], 'ė = ' + fmt(DM * R2D, 0) + '°/s'); lab([-1.15, -1.15, 0.85], 'F = +' + fmt(Fm, 0) + ' N');
+  lab([-1.15, -1.15, -0.9], '−' + fmt(Fm, 0) + ' N');
+  drawSlice();
+}
+function drawSlice() {
+  const cv = $('#cvSlice'), { ctx, w, h } = fitCanvas(cv); ctx.clearRect(0, 0, w, h);
+  const EM = 2 * FZG.es, Fm = CFG.Fm, padL = 36, padR = 10, padT = 10, padB = 22, pw = w - padL - padR, ph = h - padT - padB;
+  const X = e => padL + (e / EM + 1) / 2 * pw, Y = F => padT + ph / 2 - F / Fm * ph / 2;
+  ctx.font = '11px ' + getComputedStyle(document.body).fontFamily;
+  ctx.strokeStyle = CSS.line; ctx.lineWidth = 1;
+  for (const F of [-Fm, 0, Fm]) { ctx.beginPath(); ctx.moveTo(padL, Y(F)); ctx.lineTo(w - padR, Y(F)); ctx.stroke();
+    ctx.fillStyle = CSS.muted; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText(fmt(F, 0), padL - 5, Y(F)); }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (const k of [-1, -0.5, 0, 0.5, 1]) { ctx.beginPath(); ctx.moveTo(X(k * EM), padT); ctx.lineTo(X(k * EM), padT + ph); ctx.stroke();
+    ctx.fillText(fmt(k * EM * R2D, 0) + '°', X(k * EM), h - padB + 6); }
+  for (const [fn, col] of [[surfPD, CSS.pid], [surfF, CSS.fz]]) {
+    ctx.strokeStyle = col; ctx.lineWidth = 2.2; ctx.beginPath();
+    for (let i = 0; i <= 200; i++) { const e = -EM + 2 * EM * i / 200, F = fn(e, 0); i ? ctx.lineTo(X(e), Y(F)) : ctx.moveTo(X(e), Y(F)); }
+    ctx.stroke();
+  }
+  // câștiguri locale
+  const gain = (fn, e) => (fn(e + 1e-4, 0) - fn(e - 1e-4, 0)) / 2e-4;
+  $('#surfKv').innerHTML = `<dt>Câștig fuzzy lângă 0</dt><dd>${fmt(gain(surfF, 0.001), 0)} N/rad</dd>` +
+    `<dt>Câștig fuzzy la e = ${fmt(FZG.es * 0.5 * R2D, 0)}°</dt><dd>${fmt(gain(surfF, FZG.es * 0.5), 0)} N/rad</dd>` +
+    `<dt>Câștig PD (Kp)</dt><dd>${fmt(PIDG.kp, 0)} N/rad, constant până la saturație</dd>` +
+    `<dt>Reguli fuzzy</dt><dd>${FZG.n}×${FZG.n} = ${FZG.n * FZG.n}</dd>`;
+}
+function initSurface() {
+  const cv = $('#cv3d'); let drag = null;
+  cv.addEventListener('pointerdown', e => { drag = [e.clientX, e.clientY, VIEW.yaw, VIEW.pitch]; cv.setPointerCapture(e.pointerId); cv.style.cursor = 'grabbing'; });
+  cv.addEventListener('pointermove', e => { if (!drag) return;
+    VIEW.yaw = drag[2] + (e.clientX - drag[0]) * 0.01; VIEW.pitch = Math.max(-0.2, Math.min(1.45, drag[3] + (e.clientY - drag[1]) * 0.01)); drawSurface(); });
+  const end = () => { drag = null; cv.style.cursor = 'grab'; };
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+  segInit('segSurf', v => { VIEW.mode = v; drawSurface(); });
+  segInit('segN', v => { FZG.n = parseInt(v, 10); fzc.rebuild(); buildBalGrid(); drawSurface(); });
+  const p2 = $('#s_p2'); p2.value = FZG.p; $('#o_p2').textContent = fmt(FZG.p, 2);
+  p2.addEventListener('input', () => { setSl('p', parseFloat(p2.value)); applySettings(); drawSurface(); });
+}
+
+// =================================================================== pornire
+readCSS();
+const retheme = () => { readCSS(); if (current === 'inferenta') scheduleInf(false); drawSurface(); drawPendulum(); if (FZG) paintBalGrid(true); };
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', retheme);
+new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+addEventListener('resize', () => { if (current === 'inferenta') scheduleInf(false); drawSurface(); drawPendulum(); });
+initPendulum(); initInference(); initSurface();
+addEventListener('hashchange', showTab); showTab();
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
